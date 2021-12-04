@@ -1,0 +1,141 @@
+---
+title: 'SciLifeLab Commute: I want to ride my bicycle'
+author: "Matthias Zepper"
+date: "12/4/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+ 
+## Prepare the work environment
+
+```{r message=FALSE, warning=FALSE}
+if(!(require("osmdata") &
+     require("sf") &
+     require("mapdeck") &
+     require("dodgr"))) {
+  
+  
+  # using the mirror of the Umeå University's Academic Computer Club
+  # Choose a sensible one near you
+  options(repos = c(CRAN = "https://ftp.acc.umu.se/mirror/CRAN/")) 
+  install.packages(c("osmdata", "sf", "mapdeck", "dodgr"))
+
+  }
+
+if (!dir.exists ("data")) {
+  dir.create ("data")
+}
+
+# Setting to download data anew - even if already present
+config_download_data <- FALSE
+```
+
+## Obtain a street map of Stockholm
+### Query Open Street Map's Overpass API
+To calculate routes or perform other forms of analysis, we need a base map of Stockholm. We will use data from [Open Street Map](openstreetmap.org), which we obtain via the [OverpassAPI](https://wiki.openstreetmap.org/wiki/Overpass_API).
+
+Its description reads: "*The Overpass API is a read-only API that serves up custom selected parts of the OSM map data. It acts as a database over the web: the client sends a query to the API and gets back the data set that corresponds to the query. Unlike the main API, which is optimized for editing, Overpass API is optimized for data consumers that need a few elements within a glimpse or up to roughly 10 million elements in some minutes, both selected by search criteria like e.g. location, type of objects, tag properties, proximity, or combinations of them. It acts as a database backend for various services.*"
+
+Cool, that sounds like exactly what we need! However, like is the case with most powerful APIs, querying is quite cumbersome. [Overpass Turbo](https://overpass-turbo.eu) is a nice web application that you can use to interactively build queries. However, advantageously the R-package [`osmdata`](https://cran.r-project.org/web/packages/osmdata/index.html) provides a tremendously user-friendly interface to Overpass in R. 
+
+It provides the `opq` function that constructs an *over pass query* for us: 
+
+```{r}
+library("osmdata")
+opq ("stockholm se")
+```
+
+The `opq` function works based on a bounding box of geospatial coordinates. Under the hood, it therefore calls the `getbb` function to derive a bounding box from a name or query. Thus it is advisable to verify if your bounding box coordinates are sensible: 
+
+```{r}
+sthlm <- getbb(place_name = "Stockholm", format_out = "data.frame")
+print(sthlm[,c("display_name","importance")])
+```
+
+At a latitude of 60°, Δ1°<sub>lat</sub> corresponds to ~111km, whereas Δ1°<sub>long</sub> represents ~56km ([see Wikipedia for details](https://en.wikipedia.org/wiki/Longitude#Length_of_a_degree_of_longitude)). Hence, this query downloads map data for a rectangle of 637km<sup>2</sup>.
+
+```{r}
+coordinates <-
+  scan(textConnection(opq ("stockholm se")$bbox), sep = ",")
+print(paste0(
+  "ΔLatitude: ",
+  diff(coordinates[c(1, 3)]) * 111.412,
+  "km; ΔLongitude: ",
+  diff(coordinates[c(2, 4)]) * 55.8,
+  "km"
+))
+```
+### Select data format and features of interest
+
+Unless your query refers to some poorly mapped area e.g. in Siberia, such a square comprises **a lot** of data. For a densely populated city like Stockholm, we should therefore reduce the query to data that we will need and e.g. drop all buildings. 
+
+Navigable paths, routes, and ways are all tagged within OSM as *highway*, readily enabling an overpass query to return only ways that can be used for routing purposes. Thus, we can restrict the query to highways only:  
+
+```{r}
+opq("stockholm se") %>%
+  add_osm_feature (key = "highway")
+```
+
+This would however also include motorways and other routes that are exclusively or preferably usable by vehicles only. Thus, we would like to use a more bicycle-friendly query.
+
+OSM contains comprehensive annotations and thus [distinguishes many different features](https://wiki.openstreetmap.org/wiki/Map_features) such as *biergarten* or *nudism*. Within `osmdata` available features can be listed by `available_features()`.  
+
+For a more cyclist-focused query we might hence want to use something like:
+
+```{r}
+opq("stockholm se") %>%
+  add_osm_feature(key = "bicycle") %>%
+  add_osm_feature(key = "cycleway")
+```
+
+Multiple `add_osm_feature()` calls will however be interpreted as a logical *AND*, which will narrow down features just too easy and we might end up with an empty response from the API.  
+
+Logical *OR* conjunctions can be made with `add_osm_features()`. Mind that features must be enclosed in escape-delimited quotations, so adding `\"` is mandatory.  
+
+```{r}
+opq("stockholm se") %>%
+  add_osm_features(
+    features = c(
+      "\"amenity\"=\"bicycle_parking\"",
+      "\"amenity\"=\"bicycle_repair_station\"",
+      "\"amenity\"=\"bicycle_rental\"",
+      "\"highway\"=\"cycleway\"",
+      "\"route\"=\"bicycle\""
+    )
+  )
+```
+
+`route=bicycle` comprises all routes useable by cyclists and may go along roads, trails or dedicated cycle paths. Many fine-grained `key=value` combinations for the features are possible. See the corresponding [Bicycle page in the OSM Wiki](https://wiki.openstreetmap.org/wiki/Bicycle).
+
+### Downloading the data
+
+Up until now, we have constructed a query to the Overpass API that comprises the *Where?* (within the bounding box) and the *What?* (features of interest). 
+
+Now we need to specify the format of the response. The data may be returned in a variety of formats, currently including XML, R Spatial (sp), Simple Features (sf) and Silicate (SC). 
+
+Each of the formats has various advantages and disadvantages and may not fully support each downstream application. Simple Features (sf) is a widespread format used by many different geo-applications and is therefore recommended as default. However, not all OSM data can be coerced into Simple Features and [thus some representational data loss occurs](https://docs.ropensci.org/osmdata/articles/osm-sf-translation.html). 
+
+In contrast, Silicate can accommodate all information, such that `osmdata_sc()` function delivers a representation that is entirely faithful to the underlying OSM representation. It may not be supported by all downstream analysis tools, though.  
+
+```{r}
+if (!file.exists ("data/Silicate_sthlm_map_cycle.Rds") |
+    config_download_data) {
+  sthlm_map_cycle <- opq("stockholm se") %>%
+    add_osm_features(
+      features = c(
+        "\"amenity\"=\"bicycle_parking\"",
+        "\"amenity\"=\"bicycle_repair_station\"",
+        "\"amenity\"=\"bicycle_rental\"",
+        "\"highway\"=\"cycleway\"",
+        "\"route\"=\"bicycle\""
+      )
+    )  %>% osmdata_sc()
+  saveRDS(sthlm_map_cycle, file = "data/Silicate_sthlm_map_cycle.Rds")
+}
+```
+
+
+
