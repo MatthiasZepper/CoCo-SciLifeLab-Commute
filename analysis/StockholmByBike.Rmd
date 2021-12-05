@@ -13,7 +13,8 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ```{r message=FALSE, warning=FALSE}
 if(!(require("osmdata") &
-     require("sf") &
+     require("raster") &
+     require("rgdal") &
      require("mapdeck") &
      require("dodgr"))) {
   
@@ -21,7 +22,7 @@ if(!(require("osmdata") &
   # using the mirror of the Umeå University's Academic Computer Club
   # Choose a sensible one near you
   options(repos = c(CRAN = "https://ftp.acc.umu.se/mirror/CRAN/")) 
-  install.packages(c("osmdata", "sf", "mapdeck", "dodgr"))
+  install.packages(c("osmdata", "raster", "rgdal", "mapdeck", "dodgr"))
 
   }
 
@@ -31,6 +32,8 @@ if (!dir.exists ("data")) {
 
 # Setting to download data anew - even if already present
 config_download_data <- FALSE
+config_enrich_elevation <- FALSE
+config_path_geotiffs <- "./data/nh_01_Stockholms_lan_Sweref_99_TM_geotiff"
 ```
 
 ## Obtain a street map of Stockholm
@@ -118,7 +121,7 @@ Now we need to specify the format of the response. The data may be returned in a
 
 Each of the formats has various advantages and disadvantages and may not fully support each downstream application. Simple Features (sf) is a widespread format used by many different geo-applications and is therefore recommended as default. However, not all OSM data can be coerced into Simple Features and [thus some representational data loss occurs](https://docs.ropensci.org/osmdata/articles/osm-sf-translation.html). 
 
-In contrast, Silicate can accommodate all information, such that `osmdata_sc()` function delivers a representation that is entirely faithful to the underlying OSM representation. It may not be supported by all downstream analysis tools, though.  
+In contrast, [Silicate](https://github.com/hypertidy/silicate) can accommodate all information, such that `osmdata_sc()` function delivers a representation that is entirely faithful to the underlying OSM representation. It may not be supported by all downstream analysis tools, though.  
 
 ```{r}
 if (!file.exists ("data/Silicate_sthlm_map_cycle.Rds") |
@@ -134,8 +137,40 @@ if (!file.exists ("data/Silicate_sthlm_map_cycle.Rds") |
       )
     )  %>% osmdata_sc()
   saveRDS(sthlm_map_cycle, file = "data/Silicate_sthlm_map_cycle.Rds")
+} else {
+  sthlm_map_cycle <- readRDS("data/Silicate_sthlm_map_cycle.Rds")
 }
 ```
 
+### Enriching data with elevation data
 
+One of the advantages of using the Silicate format, the native format of the  offered by the `osmdata` package, is enabling elevation data to be combined with OSM data. Obviously, routing on street networks that accounts for elevation changes is quite advantageous for cyclists.
+
+However, even though Open Street Map contains comprehensive data, elevation data is not part of OSM catalog. Therefore, we need to obtain it from another source and integrate it with our cycle map.
+
+To do so, we need the data in GeoTIFF format. This is a modified image file format that represents elevation as grayscale values. 
+
+One option is the [CGIAR-CSI SRTM dataset](https://srtm.csi.cgiar.org/srtmdata), a post-processed derivation of the finished-grade 3 arc-second SRTM data released by the *National Aeronautics and Space Administration* (NASA) and distributed by the *United States Geological Survey* (USGS). Since it is based on satellite data, it lacks information for areas that are rarely overflown by satellites. In northern Europe, the boundary of this dataset is at about 60° latitude. Stockholm is therefore still covered (albeit at a low resolution), but not northern Sweden. Its resolution is also pretty low for routing within cities. 
+
+Hence, if possible other sources of GeoTIFF files should be considered. In 2019 the [Lantmäteriet](https://geoforum.se/nyheter/34-infrastruktur-for-geodata/3844-nationella-hoejdmodellen-aer-klar) created a new reference dataset. [For Göteborg, the Swedish Data Portal hosts an excerpt](https://www.dataportal.se/en/datasets/66_70974/hojdmodell-geotiff) that is freely available. High resolution data for Stockholm can be accessed for educational purposes with a SWAMID account at the [GET service](https://www.lantmateriet.se/globalassets/dokumentarkiv/samverkan/forskning-utbildning-och-kultur/get2howto.pdf) or [as open data with a 50m resolution after registering a user account at the Lantmäteriet ](https://www.lantmateriet.se/en/maps-and-geographic-information/open-geodata/#faq=feef).
+
+Currently, our data bundle from OSM contains 127260 vertices, each with a longitude `x_` and a latitude `y_`, but lacking elevation data `z_`.
+
+```{r}
+sthlm_map_cycle$vertex 
+```
+However, if you try to simply add the `nh_01_Stockholms_lan_Sweref_99_TM_geotiff` (or any other data set from Lantmäteriet) you will unfortunately fail:
+
+```{r}
+if(config_enrich_elevation){
+  for (elevfile in list.files(config_path_geotiffs,pattern="[0-9].tif",full.names = TRUE)){
+    print(elevfile)
+    sthlm_map_cycle <- osm_elevation(sthlm_map_cycle, elev_file = elevfile)
+  }
+}
+```
+ 
+The reason is, that most [Swedish datasets make use of the SWEREF99 coordinate system](https://www.lantmateriet.se/en/maps-and-geographic-information/gps-geodesi-och-swepos/Referenssystem/Tredimensionella-system/SWEREF-99/). This is Swedens national coordinate system, and can only be used in and around Sweden. In order to use these coordinates together with software that works with the internationally widely used WGS84 coordinate system, [conversion using a Gauss-Kreuger projection](https://pap.as/sweref/) is needed.
+
+Some software can do the transformation on the fly, if the appropriate sidecar file with spatial information is provided the (accompanying .tfw files), but osm_elevation depends solely on the GeoTIFF header. 
 
