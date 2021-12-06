@@ -13,16 +13,18 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ```{r message=FALSE, warning=FALSE}
 if(!(require("osmdata") &
+     require("sf") &
      require("raster") &
      require("rgdal") &
      require("mapdeck") &
-     require("dodgr"))) {
+     require("dodgr") &
+     require("geodist"))) {
   
   
   # using the mirror of the Umeå University's Academic Computer Club
   # Choose a sensible one near you
   options(repos = c(CRAN = "https://ftp.acc.umu.se/mirror/CRAN/")) 
-  install.packages(c("osmdata", "raster", "rgdal", "mapdeck", "dodgr"))
+  install.packages(c("osmdata","sf", "raster", "rgdal", "mapdeck", "dodgr","geodist"))
 
   }
 
@@ -48,13 +50,13 @@ It provides the `opq` function that constructs an *over pass query* for us:
 
 ```{r}
 library("osmdata")
-opq ("stockholm se")
+osmdata::opq ("stockholm se")
 ```
 
 The `opq` function works based on a bounding box of geospatial coordinates. Under the hood, it therefore calls the `getbb` function to derive a bounding box from a name or query. Thus it is advisable to verify if your bounding box coordinates are sensible: 
 
 ```{r}
-sthlm <- getbb(place_name = "Stockholm", format_out = "data.frame")
+sthlm <- osmdata::getbb(place_name = "Stockholm", format_out = "data.frame")
 print(sthlm[,c("display_name","importance")])
 ```
 
@@ -78,20 +80,20 @@ Unless your query refers to some poorly mapped area e.g. in Siberia, such a squa
 Navigable paths, routes, and ways are all tagged within OSM as *highway*, readily enabling an overpass query to return only ways that can be used for routing purposes. Thus, we can restrict the query to highways only:  
 
 ```{r}
-opq("stockholm se") %>%
-  add_osm_feature (key = "highway")
+osmdata::opq("stockholm se") %>%
+  osmdata::add_osm_feature (key = "highway")
 ```
 
-This would however also include motorways and other routes that are exclusively or preferably usable by vehicles only. Thus, we would like to use a more bicycle-friendly query.
+This would however also include motorways and other routes that are exclusively or preferably usable by vehicles. Thus, we would like to use a more bicycle-friendly query...
 
 OSM contains comprehensive annotations and thus [distinguishes many different features](https://wiki.openstreetmap.org/wiki/Map_features) such as *biergarten* or *nudism*. Within `osmdata` available features can be listed by `available_features()`.  
 
 For a more cyclist-focused query we might hence want to use something like:
 
 ```{r}
-opq("stockholm se") %>%
-  add_osm_feature(key = "bicycle") %>%
-  add_osm_feature(key = "cycleway")
+osmdata::opq("stockholm se") %>%
+  osmdata::add_osm_feature(key = "bicycle") %>%
+  osmdata::add_osm_feature(key = "cycleway")
 ```
 
 Multiple `add_osm_feature()` calls will however be interpreted as a logical *AND*, which will narrow down features just too easy and we might end up with an empty response from the API.  
@@ -99,13 +101,16 @@ Multiple `add_osm_feature()` calls will however be interpreted as a logical *AND
 Logical *OR* conjunctions can be made with `add_osm_features()`. Mind that features must be enclosed in escape-delimited quotations, so adding `\"` is mandatory.  
 
 ```{r}
-opq("stockholm se") %>%
-  add_osm_features(
+osmdata::opq("stockholm se") %>%
+  osmdata::add_osm_features(
     features = c(
       "\"amenity\"=\"bicycle_parking\"",
-      "\"amenity\"=\"bicycle_repair_station\"",
-      "\"amenity\"=\"bicycle_rental\"",
+      "\"cycleway\"=\"lane\"",
+      "\"cycleway\"=\"track\"",
       "\"highway\"=\"cycleway\"",
+      "\"highway\"=\"tertiary\"",
+      "\"highway\"=\"residential\"",
+      "\"highway\"=\"unclassified\"",
       "\"route\"=\"bicycle\""
     )
   )
@@ -121,56 +126,184 @@ Now we need to specify the format of the response. The data may be returned in a
 
 Each of the formats has various advantages and disadvantages and may not fully support each downstream application. Simple Features (sf) is a widespread format used by many different geo-applications and is therefore recommended as default. However, not all OSM data can be coerced into Simple Features and [thus some representational data loss occurs](https://docs.ropensci.org/osmdata/articles/osm-sf-translation.html). 
 
-In contrast, [Silicate](https://github.com/hypertidy/silicate) can accommodate all information, such that `osmdata_sc()` function delivers a representation that is entirely faithful to the underlying OSM representation. It may not be supported by all downstream analysis tools, though.  
+In contrast, [Silicate](https://github.com/hypertidy/silicate) can accommodate all information, such that `osmdata_sc()` function delivers a representation that is entirely faithful to the underlying OSM representation. It may not be supported by all downstream analysis tools, though. Therefore we will download the data twice in the Simple Features format for creating visualizations and in the Silicate Format for downstream analysis.   
 
 ```{r}
 if (!file.exists ("data/Silicate_sthlm_map_cycle.Rds") |
+    !file.exists ("data/SimpleFeatures_sthlm_map_cycle.Rds") |
     config_download_data) {
-  sthlm_map_cycle <- opq("stockholm se") %>%
-    add_osm_features(
+  sthlm_map_cycle <- osmdata::opq("stockholm se") %>%
+    osmdata::add_osm_feature (key = "ISO3166-2", value = "SE-AB") %>%  
+    osmdata::add_osm_features(
       features = c(
         "\"amenity\"=\"bicycle_parking\"",
-        "\"amenity\"=\"bicycle_repair_station\"",
-        "\"amenity\"=\"bicycle_rental\"",
+        "\"cycleway\"=\"lane\"",
+        "\"cycleway\"=\"track\"",
         "\"highway\"=\"cycleway\"",
+        "\"highway\"=\"tertiary\"",
+        "\"highway\"=\"residential\"",
+        "\"highway\"=\"unclassified\"",
         "\"route\"=\"bicycle\""
       )
-    )  %>% osmdata_sc()
-  saveRDS(sthlm_map_cycle, file = "data/Silicate_sthlm_map_cycle.Rds")
+    )
+    
+  sthlm_map_cycle_sc  <- osmdata::osmdata_sc(sthlm_map_cycle)
+  sthlm_map_cycle_sf  <- osmdata::osmdata_sf(sthlm_map_cycle)
+  
+  # also download the states border for visualization
+  sthlm_bdry <- opq ("stockholm se") %>%
+        osmdata::add_osm_feature (key = "boundary", value = "administrative") %>%
+        osmdata::add_osm_feature (key = "ISO3166-2", value = "SE-AB") %>%
+        osmdata::osmdata_sf()
+  sthlm_bdry <- sthlm_bdry$osm_multipolygons
+    
+  saveRDS(sthlm_map_cycle_sc, file = "data/Silicate_sthlm_map_cycle.Rds")
+  saveRDS(trim_osmdata(sthlm_map_cycle_sf,getbb("SE-AB", format_out="polygon"),exclude=TRUE), file = "data/SimpleFeatures_sthlm_map_cycle.Rds")
+  saveRDS(sthlm_bdry, file = "data/SimpleFeatures_sthlm_bdry.Rds")
+  
 } else {
-  sthlm_map_cycle <- readRDS("data/Silicate_sthlm_map_cycle.Rds")
+  sthlm_map_cycle_sc <- readRDS("data/Silicate_sthlm_map_cycle.Rds")
+  sthlm_map_cycle_sf <- readRDS("data/SimpleFeatures_sthlm_map_cycle.Rds")
+  sthlm_bdry <- readRDS("data/SimpleFeatures_sthlm_bdry.Rds")
 }
 ```
 
-### Enriching data with elevation data
+### Enrich the street map with elevation data
 
 One of the advantages of using the Silicate format, the native format of the  offered by the `osmdata` package, is enabling elevation data to be combined with OSM data. Obviously, routing on street networks that accounts for elevation changes is quite advantageous for cyclists.
 
-However, even though Open Street Map contains comprehensive data, elevation data is not part of OSM catalog. Therefore, we need to obtain it from another source and integrate it with our cycle map.
+However, even though Open Street Map contains comprehensive data, elevation data is not part of OSM catalog. To exemplify, let*s take a sneak peak into our data bundle downloaded from the OSM Overpass API. It contains 127260 vertices, each with a longitude `x_` and a latitude `y_`, but lacking elevation data `z_`:
 
-To do so, we need the data in GeoTIFF format. This is a modified image file format that represents elevation as grayscale values. 
+```{r}
+head(sthlm_map_cycle_sc$vertex, n=3) 
+```
+
+Therefore, if we wish to consider elevation data for routing, we need to obtain it from another source and integrate it with our cycle map. The `osmdata` package can integrate elevation data in GeoTIFF format, an extended image file format that represents elevation as grayscale values. 
 
 One option is the [CGIAR-CSI SRTM dataset](https://srtm.csi.cgiar.org/srtmdata), a post-processed derivation of the finished-grade 3 arc-second SRTM data released by the *National Aeronautics and Space Administration* (NASA) and distributed by the *United States Geological Survey* (USGS). Since it is based on satellite data, it lacks information for areas that are rarely overflown by satellites. In northern Europe, the boundary of this dataset is at about 60° latitude. Stockholm is therefore still covered (albeit at a low resolution), but not northern Sweden. Its resolution is also pretty low for routing within cities. 
 
 Hence, if possible other sources of GeoTIFF files should be considered. In 2019 the [Lantmäteriet](https://geoforum.se/nyheter/34-infrastruktur-for-geodata/3844-nationella-hoejdmodellen-aer-klar) created a new reference dataset. [For Göteborg, the Swedish Data Portal hosts an excerpt](https://www.dataportal.se/en/datasets/66_70974/hojdmodell-geotiff) that is freely available. High resolution data for Stockholm can be accessed for educational purposes with a SWAMID account at the [GET service](https://www.lantmateriet.se/globalassets/dokumentarkiv/samverkan/forskning-utbildning-och-kultur/get2howto.pdf) or [as open data with a 50m resolution after registering a user account at the Lantmäteriet ](https://www.lantmateriet.se/en/maps-and-geographic-information/open-geodata/#faq=feef).
 
-Currently, our data bundle from OSM contains 127260 vertices, each with a longitude `x_` and a latitude `y_`, but lacking elevation data `z_`.
 
-```{r}
-sthlm_map_cycle$vertex 
-```
 However, if you try to simply add the `nh_01_Stockholms_lan_Sweref_99_TM_geotiff` (or any other data set from Lantmäteriet) you will unfortunately fail:
 
-```{r}
-if(config_enrich_elevation){
-  for (elevfile in list.files(config_path_geotiffs,pattern="[0-9].tif",full.names = TRUE)){
-    print(elevfile)
-    sthlm_map_cycle <- osm_elevation(sthlm_map_cycle, elev_file = elevfile)
+```{r eval=FALSE}
+if(config_enrich_elevation) {
+  for (elevfile in list.files(config_path_geotiffs,
+                              pattern = "[0-9].tif",
+                              full.names = TRUE)) {
+    sthlm_map_cycle_scevl <-
+      osmdata::osm_elevation(sthlm_map_cycle_sc, elev_file = elevfile)
+    
+     saveRDS(sthlm_map_cycle_scevl, file = "data/Silicate_sthlm_map_cycle_elevation.Rds")
   }
 }
 ```
  
-The reason is, that most [Swedish datasets make use of the SWEREF99 coordinate system](https://www.lantmateriet.se/en/maps-and-geographic-information/gps-geodesi-och-swepos/Referenssystem/Tredimensionella-system/SWEREF-99/). This is Swedens national coordinate system, and can only be used in and around Sweden. In order to use these coordinates together with software that works with the internationally widely used WGS84 coordinate system, [conversion using a Gauss-Kreuger projection](https://pap.as/sweref/) is needed.
+The reason is, that our earth is of course not flat and in order to coerce geographical information into a two-dimensional representation like a flat image file, a projection needs to be used. Most [Swedish datasets make use of the SWEREF99 coordinate system](https://www.lantmateriet.se/en/maps-and-geographic-information/gps-geodesi-och-swepos/Referenssystem/Tredimensionella-system/SWEREF-99/). This is Swedens national coordinate system, and can only be used in and around Sweden. In order to use these coordinates together with software that works with the WGS84 coordinate system, an internationally widely used standard that also OSM adheres to, [conversion using a Gauss-Kreuger projection](https://pap.as/sweref/) is needed.
 
-Some software can do the transformation on the fly, if the appropriate sidecar file with spatial information is provided the (accompanying .tfw files), but osm_elevation depends solely on the GeoTIFF header. 
+Some software can do the transformation on the fly, if the appropriate sidecar file with spatial information is provided (the accompanying .tfw files in the folder), but `osm_elevation` depends solely on the GeoTIFF header, so a prior conversion of the TIFF files e.g. with [`gdalwarp`](https://gdal.org/programs/gdalwarp.html) is necessary. Integration into R is offered by the [`gdalio`](https://github.com/hypertidy/gdalio) package.
 
+As a final result, we will have a `z_` variable containing the elevation in meters for each vertex:
+
+```{r}
+if (!exists("sthlm_map_cycle_scelv") &
+    file.exists ("data/Silicate_sthlm_map_cycle_elevation.Rds")) {
+  sthlm_map_cycle_scevl <-
+    readRDS("data/Silicate_sthlm_map_cycle_elevation.Rds")
+}
+
+head(sthlm_map_cycle_scevl$vertex, n=3) 
+
+```
+
+## Vizualising the downloaded Open Street Map data
+
+Rendering a map out of the downloaded information:
+
+```{r eval=FALSE}
+if (exists("sthlm_map_cycle_sf")) {
+  library("mapdeck")
+  set_token (Sys.getenv("MAPBOXTOKEN"))
+  mapdeck (style = 'mapbox://styles/mapbox/light-v9') %>%
+    mapdeck::add_path (data = sthlm_map_cycle_sf$osm_lines,
+              stroke_width = 1,
+              stroke_colour = "#4c979f",
+              stroke_opacity = 0.6,
+              layer_id = "lines")  %>%
+  mapdeck::add_path (data = sthlm_map_cycle_sf$osm_multilines,
+              stroke_width = 1,
+              stroke_colour = "#4c979f",
+              stroke_opacity = 1,
+              layer_id = "multilines")
+}
+
+```
+
+### Visualize the elevation data
+
+
+```{r}
+if (exists("sthlm_map_cycle_scevl") &
+    is.null("sthlm_map_cycle_scevl$edgesmap")) {
+  library("dplyr")
+  
+  sthlm_map_cycle_scevl$edgesmap <-
+    dplyr::left_join (sthlm_map_cycle_scevl$edge,
+                      sthlm_map_cycle_scevl$vertex,
+                      by = c (".vx0" = "vertex_")) %>%
+    dplyr::filter(x_ >= 17.7 & y_ <= 59.7) %>%
+    dplyr::rename (".vx0_x" = x_,
+                   ".vx0_y" = y_,
+                   ".vx0_z" = z_) %>%
+    dplyr::left_join (sthlm_map_cycle_scevl$vertex, by = c (".vx1" = "vertex_")) %>%
+    dplyr::filter(x_ >= 17.7 & y_ <= 59.7) %>%
+    dplyr::rename (".vx1_x" = x_,
+                   ".vx1_y" = y_,
+                   ".vx1_z" = z_) %>%
+    dplyr::mutate ("zmn" = (.vx0_z + .vx1_z) / 2) %>%
+    dplyr::select (-c (.vx0_z, .vx1_z))
+  
+} else {
+  if (!is.null("sthlm_map_cycle_scevl$edgesmap")) {
+    head(sthlm_map_cycle_scevl$edgesmap, n = 3)
+  }
+}  
+```
+
+```{r}
+if (!is.null("sthlm_map_cycle_scevl$edgesmap")) {
+library("mapdeck")
+mapdeck (style = 'mapbox://styles/mapbox/light-v9') %>%
+  mapdeck::add_line (
+    sthlm_map_cycle_scevl$edgesmap,
+    origin = c (".vx0_x", ".vx0_y"),
+    destination = c (".vx1_x", ".vx1_y"),
+    stroke_colour = "zmn",
+    stroke_width=1.5,
+    tooltip="zmn",
+    palette = "topo",
+    legend = TRUE,
+    layer_id = "elevation"
+  )
+}
+```
+
+## Determine popular cycle routes to the SciLifeLab
+
+Now that we have obtained a road map from OSM, it is time to simulate movement within this network.
+
+Therefore, we will convert the map to a graph consisting of nodes and edges and applying a routing algorithm to determine the best connection between two nodes of that network. Several packages in R like [`igraph`](https://igraph.org/r/) provide some functionality to calculate distances on directed graphs, but we will use `dodgr`. This R package allows for an efficient calculation of many-to-many pairwise distances on dual-weighted directed graphs.
+
+Dual-weighting is highly relevant for street networks, because the optimal route is not necessarily the shortest one. Therefore, we need to consider additional factors
+that reflect preferences: Weighted distances for pedestrians on multi-lane vehicular roads are longer than equivalent distances along isolated walking paths and for cyclists steep elevations are longer than downhill slopes. Therefore `dodgr` assigns *weighted distances* depending on mode of transport and implements routing through street networks with various modes of transport, and using either distance- or time-based routing. Routing can include such factors as waiting times at traffic
+lights, delays for turning across oncoming traffic, access restrictions, and the effects of elevation on both cyclists and pedestrians.
+
+```{r}
+library("dodgr")
+sthlm_graph_cycle_scevl <- dodgr::weight_streetnet (sthlm_map_cycle_scevl, wt_profile = "bicycle", turn_penalty = TRUE)
+```
+
+```{r}
+
+```  
