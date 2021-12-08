@@ -1,8 +1,8 @@
 import {CodeSurfer} from "code-surfer";
-import {highlight} from 'mdx-deck/themes'
 import {Notes} from 'mdx-deck'
 
-export const theme = highlight
+import scilifelabTheme from "./styles/scilifelabTheme"
+export const theme = scilifelabTheme
 
 import { Logo, LogoNeu, Table, Column } from './components'
 import traffic from './assets/scilifelab/scilifelabtraffic.jpg'
@@ -113,10 +113,18 @@ None
 
 ---
 
-## Test
+### Test
 
 
-Test 
+<CodeSurfer>
+
+```js
+console.log(1);
+console.log(2);
+console.log(3);
+```
+
+</CodeSurfer>
 
 <LogoNeu/>
 
