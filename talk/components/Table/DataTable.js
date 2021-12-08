@@ -10,16 +10,16 @@ const DataTableStyle = styled.div`
   max-height: 80vh;
   
   * {
-    padding: 0.1em;
+    padding: 0.2em;
   }
 
   th {
   color: #a7c947;
   padding: 0.3em;
+  background-color: #022D4F;
   }
 
   tr:nth-of-type(odd) {
-    background-color: #022D4F;
     color: #a6a6a6;
   }
   

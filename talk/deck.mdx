@@ -1,4 +1,4 @@
-import {CodeSurfer} from "code-surfer";
+import {CodeSurfer, CodeSurferColumns, Step} from "code-surfer";
 import "prismjs/components/prism-r"
 import {Notes} from 'mdx-deck'
 import { CsvToHtmlTable } from 'react-csv-to-table';
@@ -29,6 +29,230 @@ None
 </Notes>
 
 ---
+### Download Open Street Map data
+<iframe width="100%" height="90%"
+src="https://overpass-turbo.eu/"
+title="Open Street Map Overpass Constructor"></iframe>
+
+<Notes>
+None
+
+</Notes>
+
+---
+
+<CodeSurfer>
+
+```r title="Download Open Street Map data"
+library("osmdata")
+opq("stockholm se")
+```
+
+</CodeSurfer>
+
+<Logo/>
+
+<Notes>
+None
+</Notes>
+
+---
+
+<CodeSurfer>
+
+```r title="An overpass API query"
+$bbox
+[1] "59.1651172,17.9110935,59.4851172,18.2310935"
+
+$prefix
+[1] "[out:xml][timeout:25];\n(\n"
+
+$suffix
+[1] ");\n(._;>;);\nout body;"
+
+$features
+NULL
+
+attr(,"class")
+[1] "list"           "overpass_query"
+attr(,"nodes_only")
+[1] FALSE
+```
+
+</CodeSurfer>
+
+<Logo/>
+
+<Notes>
+
+None
+
+</Notes>
+
+---
+
+<CodeSurfer>
+
+```r title="Obtaining the bounding box"
+library("osmdata")
+opq("stockholm se")
+```
+
+```r title="Obtaining the bounding box"
+  getbb(place_name = "Stockholm", 
+        format_out = "data.frame")
+```
+
+</CodeSurfer>
+
+<Logo/>
+
+<Notes>
+
+The `opq` function works based on a bounding box of geospatial coordinates. Under the hood, it therefore calls the `getbb` function to derive a bounding box from a name or query based on an importance-ranked return.
+
+</Notes>
+
+---
+
+<DataTable>
+<CsvToHtmlTable
+  data={datagetbb}
+  csvDelimiter=";"
+  hasHeader="true"
+/>
+</DataTable>
+
+<Logo/>
+
+<Notes>
+
+No notes
+
+</Notes>
+
+---
+
+### Available features
+<iframe width="100%" height="90%"
+src="https://wiki.openstreetmap.org/wiki/Map_features#Highway"
+title="Open Street Map Features"></iframe>
+
+<Notes>
+
+No notes
+
+</Notes>
+
+---
+
+<CodeSurfer>
+
+```r 1 title="Selecting map features"
+opq("stockholm se") %>%
+  add_osm_feature (key = "highway") %>%
+  add_osm_feature(key = "cycleway")
+```
+
+```r 2:3 title="Selecting map features: AND"
+opq("stockholm se") %>%
+  add_osm_feature (key = "highway") %>%
+  add_osm_feature(key = "cycleway")
+```
+
+</CodeSurfer>
+
+<Logo/>
+
+<Notes>
+
+Selecting features
+
+</Notes>
+
+---
+
+<CodeSurfer>
+
+```r 2 title="Selecting map features: OR"
+opq("stockholm se") %>%
+  add_osm_features(
+    features = c(
+        "\"amenity\"=\"bicycle_parking\"",
+        "\"cycleway\"=\"lane\"",
+        "\"cycleway\"=\"track\"",
+        "\"highway\"=\"cycleway\"",
+        "\"highway\"=\"secondary\"",
+        "\"highway\"=\"tertiary\"",
+        "\"highway\"=\"residential\"",
+        "\"highway\"=\"unclassified\"",
+        "\"highway\"=\"traffic_signals\"",
+        "\"route\"=\"bicycle\""
+    )
+  )
+```
+
+```r 4:13 title="Selecting map features: OR"
+opq("stockholm se") %>%
+  add_osm_features(
+    features = c(
+        "\"amenity\"=\"bicycle_parking\"",
+        "\"cycleway\"=\"lane\"",
+        "\"cycleway\"=\"track\"",
+        "\"highway\"=\"cycleway\"",
+        "\"highway\"=\"secondary\"",
+        "\"highway\"=\"tertiary\"",
+        "\"highway\"=\"residential\"",
+        "\"highway\"=\"unclassified\"",
+        "\"highway\"=\"traffic_signals\"",
+        "\"route\"=\"bicycle\""
+    )
+  )
+```
+
+</CodeSurfer>
+
+<Logo/>
+
+<Notes>
+
+Selecting features
+
+</Notes>
+
+---
+
+<CodeSurfer>
+
+```r 1:2 title="Output format"
+opq("stockholm se") %>%
+  add_osm_features(...) %>%
+  osmdata_sc()
+
+opq("stockholm se") %>%
+  add_osm_features(...) %>%
+  osmdata_sf()
+```
+
+```r 3,7 title="Output format"
+opq("stockholm se") %>%
+  add_osm_features(...) %>%
+  osmdata_sc()
+
+opq("stockholm se") %>%
+  add_osm_features(...) %>%
+  osmdata_sf()
+```
+
+</CodeSurfer>
+
+<Logo/>
+
+<Notes>
+No notes
+</Notes>
+
+---
 
 ### The osmdata query
 
@@ -55,90 +279,6 @@ None
 <Notes>
 None
 
-</Notes>
-
----
-
-<CodeSurfer>
-
-```r title="Constructing an overpass query"
-library("osmdata")
-osmdata::opq ("stockholm se")
-```
-
-</CodeSurfer>
-
-<Logo/>
-
-<Notes>
-None
-</Notes>
-
----
-
-<CodeSurfer>
-
-```r title="Constructing an overpass query"
-$bbox
-[1] "59.1651172,17.9110935,59.4851172,18.2310935"
-
-$prefix
-[1] "[out:xml][timeout:25];\n(\n"
-
-$suffix
-[1] ");\n(._;>;);\nout body;"
-
-$features
-NULL
-
-attr(,"class")
-[1] "list"           "overpass_query"
-attr(,"nodes_only")
-[1] FALSE
-```
-
-</CodeSurfer>
-
-<Logo/>
-
-<Notes>
-None
-
-</Notes>
-
----
-
-<CodeSurfer>
-
-```r title="Obtaining the bounding box"
-sthlm <- 
-  osmdata::getbb(place_name = "Stockholm", 
-                format_out = "data.frame")
-print(sthlm[,c("display_name","importance")])
-```
-
-</CodeSurfer>
-
-<Logo/>
-
-<Notes>
-The `opq` function works based on a bounding box of geospatial coordinates. Under the hood, it therefore calls the `getbb` function to derive a bounding box from a name or query based on an importance-ranked return.
-</Notes>
-
----
-
-<DataTable>
-<CsvToHtmlTable
-  data={datagetbb}
-  csvDelimiter=","
-  hasHeader="true"
-/>
-</DataTable>
-
-<Logo/>
-
-<Notes>
-The `opq` function works based on a bounding box of geospatial coordinates. Under the hood, it therefore calls the `getbb` function to derive a bounding box from a name or query based on an importance-ranked return.
 </Notes>
 
 ---
