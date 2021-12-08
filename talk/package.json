@@ -1,11 +1,14 @@
 {
-  "name": "modern-javascript-training",
+  "name": "Coffee and Code: Matthias Zepper",
   "version": "1.0.0",
   "scripts": {
-    "start": "mdx-deck deck.mdx",
+    "start": "concurrently \"npm:mdx\" \"npm:static\"",
+    "mdx": "mdx-deck deck.mdx",
+    "static": "cd static && python -m http.server 8081", 
     "build": "mdx-deck build deck.mdx"
   },
   "dependencies": {
+    "concurrently": "^6.4.0",
     "install": "^0.13.0",
     "npm": "^8.2.0",
     "pretty-format": "^27.2.4",

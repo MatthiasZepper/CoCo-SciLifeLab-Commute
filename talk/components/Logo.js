@@ -1,6 +1,6 @@
 import React from 'react'
 import styled from 'styled-components'
-import scilifelablogo from '../assets/scilifelab/symbol.svg'
+import scilifelablogo from '../static/assets/scilifelab/symbol.svg'
 
 export const LogoStyle = styled.div`
     align-items: center;

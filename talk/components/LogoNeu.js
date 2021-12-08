@@ -1,5 +1,5 @@
 import React from 'react';
-import scilifelablogo from '../assets/scilifelab/symbol.svg';
+import scilifelablogo from '../static/assets/scilifelab/symbol.svg';
 import { LogoStyle } from './Logo';
 
 

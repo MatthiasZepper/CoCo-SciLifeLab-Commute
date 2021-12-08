@@ -7,12 +7,11 @@ import scilifelabTheme from "./styles/scilifelabTheme"
 export const theme = scilifelabTheme
 
 import { Logo, LogoNeu, Table, DataTable, Column } from './components'
-import traffic from './assets/scilifelab/scilifelabtraffic.jpg'
 
 import {datagetbb} from './data/getbb'
 
 <Image
-  src={traffic}
+  src="http://localhost:8081/assets/scilifelab/scilifelabtraffic.jpg"
   style={{
     display: 'flex',
     alignItems: 'center',
@@ -274,6 +273,18 @@ No notes
   </Column>
 </Table>
 
+<Table>
+  <Column title="637km²">
+    <ul>
+      <li>Stockholm area</li>
+    </ul>
+  </Column>
+  <Column title="570.000">
+    <ul>
+      <li>edges</li>
+    </ul>
+  </Column>
+</Table>
 <Logo/>
 
 <Notes>
@@ -282,3 +293,14 @@ None
 </Notes>
 
 ---
+
+### The downloaded street network
+<iframe width="100%" height="90%"
+src="http://localhost:8081/mapdeckA.html"
+title="Road network vizualized"></iframe>
+
+<Notes>
+
+No notes
+
+</Notes>

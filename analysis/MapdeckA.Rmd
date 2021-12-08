@@ -1,0 +1,33 @@
+---
+title: "MapboxA"
+author: "Matthias Zepper"
+date: "12/8/2021"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+setwd("~/Documents/Coffee and Code/2021-12/CoCo-SciLifeLab-Commute/analysis")
+sthlm_map_cycle_sf <- readRDS("data/SimpleFeatures_sthlm_map_cycle.Rds")
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, messages=FALSE}
+if (exists("sthlm_map_cycle_sf")) {
+  library("mapdeck")
+  set_token (Sys.getenv("MAPBOX_TOKEN"))
+  mapdeck (style = 'mapbox://styles/mapbox/light-v9') %>%
+    mapdeck::add_path (data = sthlm_map_cycle_sf$osm_lines,
+              stroke_width = 1,
+              stroke_colour = "#4c979f",
+              stroke_opacity = 0.6,
+              layer_id = "lines")  %>%
+  mapdeck::add_path (data = sthlm_map_cycle_sf$osm_multilines,
+              stroke_width = 1,
+              stroke_colour = "#4c979f",
+              stroke_opacity = 1,
+              layer_id = "multilines")
+}
+```
+
