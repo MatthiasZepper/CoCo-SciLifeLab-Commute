@@ -6,7 +6,10 @@
     "build": "mdx-deck build deck.mdx"
   },
   "dependencies": {
+    "install": "^0.13.0",
+    "npm": "^8.2.0",
     "pretty-format": "^27.2.4",
+    "react-csv-to-table": "0.0.1",
     "react-icons": "^4.3.1",
     "styled-components": "^5.3.1"
   },

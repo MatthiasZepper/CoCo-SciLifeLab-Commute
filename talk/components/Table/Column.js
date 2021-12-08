@@ -12,8 +12,8 @@ const ColumnStyle = styled.div`
   }
 
   li {
-    width: calc(100vw / 10);
-    font-size: 16px;
+    width: calc(100vw / 4);
+    font-size: 25px;
     list-style: none;
     padding: 4px;
   }

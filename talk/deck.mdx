@@ -1,11 +1,15 @@
 import {CodeSurfer} from "code-surfer";
+import "prismjs/components/prism-r"
 import {Notes} from 'mdx-deck'
+import { CsvToHtmlTable } from 'react-csv-to-table';
 
 import scilifelabTheme from "./styles/scilifelabTheme"
 export const theme = scilifelabTheme
 
-import { Logo, LogoNeu, Table, Column } from './components'
+import { Logo, LogoNeu, Table, DataTable, Column } from './components'
 import traffic from './assets/scilifelab/scilifelabtraffic.jpg'
+
+import {datagetbb} from './data/getbb'
 
 <Image
   src={traffic}
@@ -26,18 +30,22 @@ None
 
 ---
 
-### News
+### The osmdata query
 
 <Table>
-  <Column title="ES2015">
+  <Column title="Where">
     <ul>
-      <li>Variable Scoping</li>
+      <li>opq(getbb())&nbsp;%>% </li>
     </ul>
   </Column>
-  <Column title="ES2016">
+  <Column title="What">
     <ul>
-      <li>Array includes</li>
-      <li>Exponentiation Operator</li>
+      <li>add_features()&nbsp;%>% </li>
+    </ul>
+  </Column>
+  <Column title="How">
+    <ul>
+      <li>osmdata_sc()</li>
     </ul>
   </Column>
 </Table>
@@ -53,53 +61,40 @@ None
 
 <CodeSurfer>
 
-```javascript title="Variable scoping"
-var a = 1;
-
-if (a === 1) {
-  var a = 2;
-
-  console.log(a); // 2
-}
-
-console.log(a); // 2
+```r title="Constructing an overpass query"
+library("osmdata")
+osmdata::opq ("stockholm se")
 ```
 
-```javascript title="Variable scoping"
-let a = 1;
+</CodeSurfer>
 
-if (a === 1) {
-  let a = 2;
+<Logo/>
 
-  console.log(a); // 2
-}
+<Notes>
+None
+</Notes>
 
-console.log(a); // 1
-```
+---
 
-```javascript title="Variable scoping"
-const x = 1;
+<CodeSurfer>
 
-if (x === 1) {
-  const x = 2;
+```r title="Constructing an overpass query"
+$bbox
+[1] "59.1651172,17.9110935,59.4851172,18.2310935"
 
-  console.log(x); // 2
-}
+$prefix
+[1] "[out:xml][timeout:25];\n(\n"
 
-console.log(x); // 1
-```
+$suffix
+[1] ");\n(._;>;);\nout body;"
 
-```javascript title="Variable scoping"
-const x = 1;
+$features
+NULL
 
-if (x === 1) {
-  const x = 2;
-
-  console.log(x); // 2
-}
-x = 3 // throw SyntaxError
-
-console.log(x); // 1
+attr(,"class")
+[1] "list"           "overpass_query"
+attr(,"nodes_only")
+[1] FALSE
 ```
 
 </CodeSurfer>
@@ -113,23 +108,37 @@ None
 
 ---
 
-### Test
-
-
 <CodeSurfer>
 
-```js
-console.log(1);
-console.log(2);
-console.log(3);
+```r title="Obtaining the bounding box"
+sthlm <- 
+  osmdata::getbb(place_name = "Stockholm", 
+                format_out = "data.frame")
+print(sthlm[,c("display_name","importance")])
 ```
 
 </CodeSurfer>
 
-<LogoNeu/>
+<Logo/>
 
 <Notes>
-None
-
+The `opq` function works based on a bounding box of geospatial coordinates. Under the hood, it therefore calls the `getbb` function to derive a bounding box from a name or query based on an importance-ranked return.
 </Notes>
 
+---
+
+<DataTable>
+<CsvToHtmlTable
+  data={datagetbb}
+  csvDelimiter=","
+  hasHeader="true"
+/>
+</DataTable>
+
+<Logo/>
+
+<Notes>
+The `opq` function works based on a bounding box of geospatial coordinates. Under the hood, it therefore calls the `getbb` function to derive a bounding box from a name or query based on an importance-ranked return.
+</Notes>
+
+---
