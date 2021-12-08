@@ -53,12 +53,13 @@ library("osmdata")
 osmdata::opq ("stockholm se")
 ```
 
-The `opq` function works based on a bounding box of geospatial coordinates. Under the hood, it therefore calls the `getbb` function to derive a bounding box from a name or query. Thus it is advisable to verify if your bounding box coordinates are sensible: 
+The `opq` function works based on a bounding box of geospatial coordinates. Under the hood, it therefore calls the `getbb` function to derive a bounding box from a name or query based on an importance-ranked return:
 
 ```{r}
 sthlm <- osmdata::getbb(place_name = "Stockholm", format_out = "data.frame")
 print(sthlm[,c("display_name","importance")])
 ```
+Thus it is advisable to verify if your bounding box coordinates in `bbox`  are sensible! 
 
 At a latitude of 60°, Δ1°<sub>lat</sub> corresponds to ~111km, whereas Δ1°<sub>long</sub> represents ~56km ([see Wikipedia for details](https://en.wikipedia.org/wiki/Longitude#Length_of_a_degree_of_longitude)). Hence, this query downloads map data for a rectangle of 637km<sup>2</sup>.
 
@@ -84,11 +85,11 @@ osmdata::opq("stockholm se") %>%
   osmdata::add_osm_feature (key = "highway")
 ```
 
-This would however also include motorways and other routes that are exclusively or preferably usable by vehicles. Thus, we would like to use a more bicycle-friendly query...
+This would however also include motorways and other routes that are exclusively or preferably usable by vehicles. The routing algorithm that we will use later can apply *weights* to roads reflecting preferences and thus we must not be overly concerned if we happen to download motorways, because with a weighting profile for cyclists will penalize routes along motorways so heavily that they will anyway be eliminated.  
 
-OSM contains comprehensive annotations and thus [distinguishes many different features](https://wiki.openstreetmap.org/wiki/Map_features) such as *biergarten* or *nudism*. Within `osmdata` available features can be listed by `available_features()`.  
+Nonetheless, we can save some data and reduce computing time if we already restrict your street network to a more bicycle-friendly query!
 
-For a more cyclist-focused query we might hence want to use something like:
+OSM contains comprehensive annotations and thus [distinguishes many different features](https://wiki.openstreetmap.org/wiki/Map_features) such as *biergarten* or *nudism*. Within `osmdata` available features can be listed by `available_features()`. For a more cyclist-focused query we might want to use something like:
 
 ```{r}
 osmdata::opq("stockholm se") %>%
@@ -104,14 +105,16 @@ Logical *OR* conjunctions can be made with `add_osm_features()`. Mind that featu
 osmdata::opq("stockholm se") %>%
   osmdata::add_osm_features(
     features = c(
-      "\"amenity\"=\"bicycle_parking\"",
-      "\"cycleway\"=\"lane\"",
-      "\"cycleway\"=\"track\"",
-      "\"highway\"=\"cycleway\"",
-      "\"highway\"=\"tertiary\"",
-      "\"highway\"=\"residential\"",
-      "\"highway\"=\"unclassified\"",
-      "\"route\"=\"bicycle\""
+        "\"amenity\"=\"bicycle_parking\"",
+        "\"cycleway\"=\"lane\"",
+        "\"cycleway\"=\"track\"",
+        "\"highway\"=\"cycleway\"",
+        "\"highway\"=\"secondary\"",
+        "\"highway\"=\"tertiary\"",
+        "\"highway\"=\"residential\"",
+        "\"highway\"=\"unclassified\"",
+        "\"highway\"=\"traffic_signals\"",
+        "\"route\"=\"bicycle\""
     )
   )
 ```
@@ -140,9 +143,11 @@ if (!file.exists ("data/Silicate_sthlm_map_cycle.Rds") |
         "\"cycleway\"=\"lane\"",
         "\"cycleway\"=\"track\"",
         "\"highway\"=\"cycleway\"",
+        "\"highway\"=\"secondary\"",
         "\"highway\"=\"tertiary\"",
         "\"highway\"=\"residential\"",
         "\"highway\"=\"unclassified\"",
+        "\"highway\"=\"traffic_signals\"",
         "\"route\"=\"bicycle\""
       )
     )
@@ -158,7 +163,12 @@ if (!file.exists ("data/Silicate_sthlm_map_cycle.Rds") |
   sthlm_bdry <- sthlm_bdry$osm_multipolygons
     
   saveRDS(sthlm_map_cycle_sc, file = "data/Silicate_sthlm_map_cycle.Rds")
-  saveRDS(trim_osmdata(sthlm_map_cycle_sf,getbb("SE-AB", format_out="polygon"),exclude=TRUE), file = "data/SimpleFeatures_sthlm_map_cycle.Rds")
+  saveRDS(osmdata::trim_osmdata(
+    sthlm_map_cycle_sf,
+    osmdata::getbb("SE-AB", format_out = "polygon")[[1]],
+    exclude = TRUE
+  ),
+  file = "data/SimpleFeatures_sthlm_map_cycle.Rds")
   saveRDS(sthlm_bdry, file = "data/SimpleFeatures_sthlm_bdry.Rds")
   
 } else {
@@ -180,7 +190,7 @@ head(sthlm_map_cycle_sc$vertex, n=3)
 
 Therefore, if we wish to consider elevation data for routing, we need to obtain it from another source and integrate it with our cycle map. The `osmdata` package can integrate elevation data in GeoTIFF format, an extended image file format that represents elevation as grayscale values. 
 
-One option is the [CGIAR-CSI SRTM dataset](https://srtm.csi.cgiar.org/srtmdata), a post-processed derivation of the finished-grade 3 arc-second SRTM data released by the *National Aeronautics and Space Administration* (NASA) and distributed by the *United States Geological Survey* (USGS). Since it is based on satellite data, it lacks information for areas that are rarely overflown by satellites. In northern Europe, the boundary of this dataset is at about 60° latitude. Stockholm is therefore still covered (albeit at a low resolution), but not northern Sweden. Its resolution is also pretty low for routing within cities. 
+One option is the [CGIAR-CSI SRTM dataset](https://srtm.csi.cgiar.org/srtmdata), a post-processed derivation of the finished-grade 3 arc-second SRTM data released by the *National Aeronautics and Space Administration* (NASA) and distributed by the *United States Geological Survey* (USGS). Since it is based on satellite data, it lacks information for areas that are rarely overflown by satellites. In northern Europe, the boundary of this dataset is at about 60° latitude. Stockholm is therefore still covered (albeit at a low resolution), but not northern Sweden. Its resolution is also pretty low for routing within cities, all bridges are for example considered to be almost on sea level.  
 
 Hence, if possible other sources of GeoTIFF files should be considered. In 2019 the [Lantmäteriet](https://geoforum.se/nyheter/34-infrastruktur-for-geodata/3844-nationella-hoejdmodellen-aer-klar) created a new reference dataset. [For Göteborg, the Swedish Data Portal hosts an excerpt](https://www.dataportal.se/en/datasets/66_70974/hojdmodell-geotiff) that is freely available. High resolution data for Stockholm can be accessed for educational purposes with a SWAMID account at the [GET service](https://www.lantmateriet.se/globalassets/dokumentarkiv/samverkan/forskning-utbildning-och-kultur/get2howto.pdf) or [as open data with a 50m resolution after registering a user account at the Lantmäteriet ](https://www.lantmateriet.se/en/maps-and-geographic-information/open-geodata/#faq=feef).
 
@@ -224,7 +234,7 @@ Rendering a map out of the downloaded information:
 ```{r eval=FALSE}
 if (exists("sthlm_map_cycle_sf")) {
   library("mapdeck")
-  set_token (Sys.getenv("MAPBOXTOKEN"))
+  set_token (Sys.getenv("MAPBOX_TOKEN"))
   mapdeck (style = 'mapbox://styles/mapbox/light-v9') %>%
     mapdeck::add_path (data = sthlm_map_cycle_sf$osm_lines,
               stroke_width = 1,
@@ -237,7 +247,6 @@ if (exists("sthlm_map_cycle_sf")) {
               stroke_opacity = 1,
               layer_id = "multilines")
 }
-
 ```
 
 ### Visualize the elevation data
@@ -271,9 +280,10 @@ if (exists("sthlm_map_cycle_scevl") &
 }  
 ```
 
-```{r}
+```{r eval=FALSE}
 if (!is.null("sthlm_map_cycle_scevl$edgesmap")) {
 library("mapdeck")
+set_token (Sys.getenv("MAPBOX_TOKEN"))
 mapdeck (style = 'mapbox://styles/mapbox/light-v9') %>%
   mapdeck::add_line (
     sthlm_map_cycle_scevl$edgesmap,
@@ -295,15 +305,70 @@ Now that we have obtained a road map from OSM, it is time to simulate movement w
 
 Therefore, we will convert the map to a graph consisting of nodes and edges and applying a routing algorithm to determine the best connection between two nodes of that network. Several packages in R like [`igraph`](https://igraph.org/r/) provide some functionality to calculate distances on directed graphs, but we will use `dodgr`. This R package allows for an efficient calculation of many-to-many pairwise distances on dual-weighted directed graphs.
 
+### Building and weighting the network
+
 Dual-weighting is highly relevant for street networks, because the optimal route is not necessarily the shortest one. Therefore, we need to consider additional factors
 that reflect preferences: Weighted distances for pedestrians on multi-lane vehicular roads are longer than equivalent distances along isolated walking paths and for cyclists steep elevations are longer than downhill slopes. Therefore `dodgr` assigns *weighted distances* depending on mode of transport and implements routing through street networks with various modes of transport, and using either distance- or time-based routing. Routing can include such factors as waiting times at traffic
 lights, delays for turning across oncoming traffic, access restrictions, and the effects of elevation on both cyclists and pedestrians.
 
+`dodgr` comes with a set of preconfigured *weighting_profiles* for the most common types of traffic that happens on street networks: 
+
+```{r}
+library("dodgr")
+unique(dodgr::weighting_profiles$weighting_profiles$name)
+```
+<sub>*hgv* heavy goods vehicle = lorry, truck; *psv* is a public service vehicle = e.g. busses.</sub>
+
+The profile for cyclists mostly considers the type of road and the road surface and also traffic lights: 
+
+```{r}
+library("dodgr")
+lapply(dodgr::weighting_profiles, dplyr::filter, name=="bicycle")  
+```
+
+The profiles can be used to modify the weights of the edges upon converting the street map into a graph: 
+
 ```{r}
 library("dodgr")
 sthlm_graph_cycle_scevl <- dodgr::weight_streetnet (sthlm_map_cycle_scevl, wt_profile = "bicycle", turn_penalty = TRUE)
-```
+sthlm_graph_cycle_sc <- dodgr::weight_streetnet (sthlm_map_cycle_sc, wt_profile = "bicycle", turn_penalty = TRUE)
+```  
+
+Our resulting graph for Stockholm contains about half a million edges. The one generated from the map with elevation information has one additional column `dz`  for *distance in z*.  
 
 ```{r}
+dim(sthlm_graph_cycle_scevl)
+setdiff(colnames(sthlm_graph_cycle_scevl),colnames(sthlm_graph_cycle_sc))
+``` 
 
-```  
+The elevation does neither affect the physical distances nor the weighted distances (which incorporate the type of route e.g. primary road vs. cycleway) within the graph:
+
+```{r}
+summary(sthlm_graph_cycle_scevl$d/sthlm_graph_cycle_sc$d)
+summary(sthlm_graph_cycle_scevl$d_weighted/sthlm_graph_cycle_sc$d_weighted)
+``` 
+
+The elevation may however affect the time and the time_weighted columns, although I am slightly skeptical about the 89 fold increase in time here:
+
+```{r}
+summary(sthlm_graph_cycle_scevl$time/sthlm_graph_cycle_sc$time)
+summary(sthlm_graph_cycle_scevl$time_weighted/sthlm_graph_cycle_sc$time_weighted)
+``` 
+
+Investigate the outliers:
+
+```{r}
+sthlm_graph_cycle_scevl$travel_time_factors <- sthlm_graph_cycle_scevl$time/sthlm_graph_cycle_sc$time
+outliers_extreme <- dplyr::filter(as.data.frame(sthlm_graph_cycle_scevl), travel_time_factors > 30) 
+summary(outliers_extreme$d)
+summary(outliers_extreme$dz/outliers_extreme$d)
+``` 
+
+The outliers are apparently very short edges (between 1-9m), but typically have a z-distance between that is 3 to 8 times greater. So the prolonged travel times are probably justified for almost vertical routes (unless you are into speed climbing), but clearly attributable to errors in the elevation data. Therefore, we will correct the times for those edges from the corresponding graph without elevation and later visualize them on the map to manually investigate.
+
+```{r}
+index_travel_time_outliers <- sthlm_graph_cycle_scevl$travel_time_factors > 5
+index_travel_time_outliers[is.na(index_travel_time_outliers)] <- TRUE # also replace values for NA 
+sthlm_graph_cycle_scevl[index_travel_time_outliers ,"time"] <- unlist(sthlm_graph_cycle_sc[index_travel_time_outliers ,"time"])
+sthlm_graph_cycle_scevl[index_travel_time_outliers ,"time_weighted"] <- unlist(sthlm_graph_cycle_sc[index_travel_time_outliers ,"time_weighted"])
+``` 

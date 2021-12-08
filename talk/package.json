@@ -1,0 +1,17 @@
+{
+  "name": "modern-javascript-training",
+  "version": "1.0.0",
+  "scripts": {
+    "start": "mdx-deck deck.mdx",
+    "build": "mdx-deck build deck.mdx"
+  },
+  "dependencies": {
+    "pretty-format": "^27.2.4",
+    "react-icons": "^4.3.1",
+    "styled-components": "^5.3.1"
+  },
+  "devDependencies": {
+    "code-surfer": "3.1.0",
+    "mdx-deck": "3.0.10"
+  }
+}
