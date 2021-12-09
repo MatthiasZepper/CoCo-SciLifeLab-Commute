@@ -6,9 +6,16 @@ import { CsvToHtmlTable } from 'react-csv-to-table';
 import scilifelabTheme from "./styles/scilifelabTheme"
 export const theme = scilifelabTheme
 
-import { Logo, LogoNeu, Table, DataTable, Column } from './components'
+import { Logo, LogoNeu, Table, DataTable, Column} from './components'
+import bicyclemusic from './static/music/bicycle.mp3';
 
 import {datagetbb} from './data/getbb'
+import {datadodgrnet} from './data/dodgrNet'
+import {datadodgrweightsa} from './data/dodgrWeightsA'
+import {datadodgrweightsb} from './data/dodgrWeightsB'
+import {datadodgrweightsc} from './data/dodgrWeightsC'
+
+
 
 <Image
   src="http://localhost:8081/assets/scilifelab/scilifelabtraffic.jpg"
@@ -22,21 +29,68 @@ import {datagetbb} from './data/getbb'
 
 ## Commuter traffic analysis in R
 
-<Notes>
-None
+---
 
-</Notes>
+## Münster & Peace of Westphalia 1648
+
+<CodeSurferColumns sizes={[1.9,1]}>
+
+<Step>
+
+<Image
+  src="http://localhost:8081/assets/photos/muensterprinzipalmarkt.jpg"
+  style={{
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+  }}></Image>
+
+<Image
+  src="http://localhost:8081/assets/img/triumphuspacis.jpg"
+  style={{
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+  }}></Image>
+
+</Step>
+</CodeSurferColumns>
 
 ---
+
+## The "Promenade" - Bicycle expressway
+<audio controls>
+  <source src={bicyclemusic} />
+</audio>
+<CodeSurferColumns sizes={[1.9,1]}>
+
+<Step>
+
+<Image
+  src="http://localhost:8081/assets/photos/muensterluftbild.jpg"
+  style={{
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+  }}></Image>
+
+<Image
+  src="http://localhost:8081/assets/photos/muensterpromenade.jpg"
+  style={{
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+  }}></Image>
+
+</Step>
+</CodeSurferColumns>
+
+  ---
+
 ### Download Open Street Map data
 <iframe width="100%" height="90%"
 src="https://overpass-turbo.eu/"
 title="Open Street Map Overpass Constructor"></iframe>
-
-<Notes>
-None
-
-</Notes>
 
 ---
 
@@ -50,10 +104,6 @@ opq("stockholm se")
 </CodeSurfer>
 
 <Logo/>
-
-<Notes>
-None
-</Notes>
 
 ---
 
@@ -82,12 +132,6 @@ attr(,"nodes_only")
 
 <Logo/>
 
-<Notes>
-
-None
-
-</Notes>
-
 ---
 
 <CodeSurfer>
@@ -106,12 +150,6 @@ opq("stockholm se")
 
 <Logo/>
 
-<Notes>
-
-The `opq` function works based on a bounding box of geospatial coordinates. Under the hood, it therefore calls the `getbb` function to derive a bounding box from a name or query based on an importance-ranked return.
-
-</Notes>
-
 ---
 
 <DataTable>
@@ -124,24 +162,12 @@ The `opq` function works based on a bounding box of geospatial coordinates. Unde
 
 <Logo/>
 
-<Notes>
-
-No notes
-
-</Notes>
-
 ---
 
 ### Available features
 <iframe width="100%" height="90%"
 src="https://wiki.openstreetmap.org/wiki/Map_features#Highway"
 title="Open Street Map Features"></iframe>
-
-<Notes>
-
-No notes
-
-</Notes>
 
 ---
 
@@ -162,12 +188,6 @@ opq("stockholm se") %>%
 </CodeSurfer>
 
 <Logo/>
-
-<Notes>
-
-Selecting features
-
-</Notes>
 
 ---
 
@@ -213,12 +233,6 @@ opq("stockholm se") %>%
 
 <Logo/>
 
-<Notes>
-
-Selecting features
-
-</Notes>
-
 ---
 
 <CodeSurfer>
@@ -246,10 +260,6 @@ opq("stockholm se") %>%
 </CodeSurfer>
 
 <Logo/>
-
-<Notes>
-No notes
-</Notes>
 
 ---
 
@@ -287,20 +297,265 @@ No notes
 </Table>
 <Logo/>
 
-<Notes>
-None
-
-</Notes>
-
 ---
 
 ### The downloaded street network
 <iframe width="100%" height="90%"
-src="http://localhost:8081/mapdeckA.html"
+src="http://localhost:8081/maps/mapdeckA.html"
 title="Road network vizualized"></iframe>
 
-<Notes>
+---
 
-No notes
+### deck.gl DataViz library
+<iframe width="100%" height="90%"
+src="http://avivator.gehlenborglab.org/?image_url=https://viv-demo.storage.googleapis.com/Vanderbilt-Spraggins-Kidney-MxIF.ome.tif"
+title="Road network vizualized"></iframe>
 
-</Notes>
+---
+
+<CodeSurfer>
+
+```r 1 title="Mapdeck: R-bindings for Deck.gl"
+library("mapdeck")
+set_token (Sys.getenv("MAPBOX_TOKEN"))
+  mapdeck (style = 'mapbox://styles/mapbox/light-v9') %>%
+    mapdeck::add_path (data = sthlm_map_cycle_sf$osm_lines,
+              stroke_width = 1,
+              stroke_colour = "#4c979f",
+              stroke_opacity = 0.6,
+              layer_id = "lines")
+```
+
+```r 2:3 title="Mapdeck: R-bindings for Deck.gl"
+library("mapdeck")
+set_token (Sys.getenv("MAPBOX_TOKEN"))
+  mapdeck (style = 'mapbox://styles/mapbox/light-v9') %>%
+    mapdeck::add_path (data = sthlm_map_cycle_sf$osm_lines,
+              stroke_width = 1,
+              stroke_colour = "#4c979f",
+              stroke_opacity = 0.6,
+              layer_id = "lines")
+```
+
+```r 4:8 title="Mapdeck: R-bindings for Deck.gl"
+library("mapdeck")
+set_token (Sys.getenv("MAPBOX_TOKEN"))
+  mapdeck (style = 'mapbox://styles/mapbox/light-v9') %>%
+    mapdeck::add_path (data = sthlm_map_cycle_sf$osm_lines,
+              stroke_width = 1,
+              stroke_colour = "#4c979f",
+              stroke_opacity = 0.6,
+              layer_id = "lines")
+```
+
+</CodeSurfer>
+
+<Logo/>
+
+---
+
+### Mapdeck rendered network
+<iframe width="100%" height="90%"
+src="http://localhost:8081/maps/mapdeckA.html"
+title="Road network vizualized"></iframe>
+
+---
+
+## Adding elevation data
+
+<Image src="http://localhost:8081/assets/img/steep.svg"
+  style={{
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '26.5vw',
+    height: '40.5vh',
+  }}></Image>
+
+  ---
+
+### Elevation data is not available via Overpass
+<iframe width="100%" height="90%"
+src="https://geoforum.se/nyheter/34-infrastruktur-for-geodata/3844-nationella-hoejdmodellen-aer-klar"
+title="Elevation model"></iframe>
+
+---
+
+## Mind the projection!
+
+<Image src="http://localhost:8081/assets/img/mollweideprojection.jpg"
+  style={{
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+  }}></Image>
+
+  ---
+
+## Lantmäteriet uses SWEREF99!
+<Image src="http://localhost:8081/assets/img/millerprojection.svg"
+  style={{
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+  }}></Image>
+
+  ---
+
+<CodeSurfer>
+
+```js title="Gdalwarp to WGS84"
+e2 = this.flattening * (2 - this.flattening)
+n = this.flattening / (2 - this.flattening)
+a_roof = this.axis / (1 + n) * (1 + n * n / 4 + n * n * n * n / 64)
+delta1 = n / 2 - 2 * n * n / 3 + 37 * n * n * n / 96 - n * n * n * n / 360
+delta2 = n * n / 48 + n * n * n / 15 - 437 * n * n * n * n / 1440
+delta3 = 17 * n * n * n / 480 - 37 * n * n * n * n / 840
+delta4 = 4397 * n * n * n * n / 161280
+Astar = e2 + e2 * e2 + e2 * e2 * e2 + e2 * e2 * e2 * e2
+Bstar = -(7 * e2 * e2 + 17 * e2 * e2 * e2 + 30 * e2 * e2 * e2 * e2) / 6
+Cstar = (224 * e2 * e2 * e2 + 889 * e2 * e2 * e2 * e2) / 120
+Dstar = -(4279 * e2 * e2 * e2 * e2) / 1260
+deg_to_rad = 017453292519943295D
+lambda_zero = this.central_meridian * deg_to_rad
+xi = (x - this.false_northing) / (this.scale * a_roof)
+eta = (y - this.false_easting) / (this.scale * a_roof)
+xi_prim = xi - delta1 * sin(2 * xi) * cosh(2 * eta) - delta2 * sin(4 * xi) * cosh(4 * eta) - delta3 * sin(6 * xi) * cosh(6 * eta) - delta4 * sin(8 * xi) * cosh(8 * eta)
+eta_prim = eta - delta1 * cos(2 * xi) * sinh(2 * eta) - delta2 * cos(4 * xi) * sinh(4 * eta) - delta3 * cos(6 * xi) * sinh(6 * eta) - delta4 * cos(8 * xi) * sinh(8 * eta)
+phi_star = Math.asin(sin(xi_prim) / cosh(eta_prim))
+delta_lambda = atan(sinh(eta_prim) / cos(xi_prim))
+lon_radian = lambda_zero + delta_lambda
+lat_radian = phi_star + sin(phi_star) * cos(phi_star) * (Astar + Bstar * sin(phi_star)^2 + Cstar * sin(phi_star)^4 + Dstar * sin(phi_star)^6)
+longitude = lat_radian * 180 / 3.141592653589793D
+latitude = lon_radian * 180 / 3.141592653589793D
+```
+
+</CodeSurfer>
+
+<Logo/>
+
+---
+
+### Eventually used elevation data from NASA
+<iframe width="100%" height="90%"
+src="http://localhost:8081/maps/mapdeckB.html"
+title="Elevation on road network vizualized"></iframe>
+
+---
+
+<CodeSurfer>
+
+```r title="Adding elevation data"
+sthlm_map_cycle_scevl <-
+  osm_elevation(sthlm_map_cycle_sc,
+                elev_file = "./GeoTiff.tif")
+```
+
+</CodeSurfer>
+
+<Logo/>
+
+
+---
+
+## Graphs and the Seven Bridges of Königsberg
+
+<Table>
+  <Column>
+    <Image src="http://localhost:8081/assets/img/7_bridges.svg"
+    style={{
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '36.5vw',
+    height: '45vh',
+  }}></Image>
+  </Column>
+  <Column>
+    <Image src="http://localhost:8081/assets/img/koeningsberg-graph.svg"
+    style={{
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '33vw',
+    height: '45vh',
+  }}></Image>
+  </Column>
+</Table>
+
+<sub>Leonhard Euler, 1736</sub>
+
+---
+
+<CodeSurfer>
+
+```r 1 title="Simulating traffic"
+library("dodgr")
+sthlm_graph_cycle_scevl <- 
+  weight_streetnet(sthlm_map_cycle_scevl, 
+                    wt_profile = "bicycle",
+                    turn_penalty = TRUE)
+```
+
+```r 3:5 title="Simulating traffic"
+library("dodgr")
+sthlm_graph_cycle_scevl <- 
+  weight_streetnet(sthlm_map_cycle_scevl, 
+                    wt_profile = "bicycle",
+                    turn_penalty = TRUE)
+```
+
+```r 4 title="Simulating traffic"
+library("dodgr")
+sthlm_graph_cycle_scevl <- 
+  weight_streetnet(sthlm_map_cycle_scevl, 
+                    wt_profile = "bicycle",
+                    turn_penalty = TRUE)
+```
+
+</CodeSurfer>
+
+<Logo/>
+
+
+---
+
+## Weighting the street network
+
+<CodeSurferColumns sizes={[1,1]}>
+
+<Step title="Profiles for foot, horse, wheelchair...">
+
+<DataTable>
+<CsvToHtmlTable
+  data={datadodgrweightsa}
+  csvDelimiter=","
+  hasHeader="true"
+/>
+</DataTable>
+
+<DataTable>
+<CsvToHtmlTable
+  data={datadodgrweightsb}
+  csvDelimiter=","
+  hasHeader="true"
+/>
+</DataTable>
+
+</Step>
+</CodeSurferColumns>
+
+<Logo/>
+
+---
+
+## (Dual) weighted street net
+<DataTable>
+<CsvToHtmlTable
+  data={datadodgrnet}
+  csvDelimiter=","
+  hasHeader="true"
+/>
+</DataTable>
+
+<Logo/>

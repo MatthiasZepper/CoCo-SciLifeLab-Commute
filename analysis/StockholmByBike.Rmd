@@ -1,7 +1,7 @@
 ---
-title: 'SciLifeLab Commute: I want to ride my bicycle'
+title: 'SciLifeLab Commute: I want to ride my bicycle Part I'
 author: "Matthias Zepper"
-date: "12/4/2021"
+date: "12/9/2021"
 output: html_document
 ---
 
@@ -330,13 +330,19 @@ The profiles can be used to modify the weights of the edges upon converting the 
 
 ```{r}
 library("dodgr")
+sthlm_graph_cycle_scevl_noturn <- dodgr::weight_streetnet (sthlm_map_cycle_scevl, wt_profile = "bicycle", turn_penalty = FALSE)
 sthlm_graph_cycle_scevl <- dodgr::weight_streetnet (sthlm_map_cycle_scevl, wt_profile = "bicycle", turn_penalty = TRUE)
 sthlm_graph_cycle_sc <- dodgr::weight_streetnet (sthlm_map_cycle_sc, wt_profile = "bicycle", turn_penalty = TRUE)
 ```  
 
+Weighting for time-based routing introduces new "compound" edges and requires re-labelling junction vertices, through appending either "\_start" or "\_end". Recommended practice for routing in such cases is to select routing vertices (origins and destinations) from a standard weightedgraph (that is, one generated with `turn_penalty = FALSE`), and then to modify these routing vertices.
+
+The time-weighted graph has additional compound edges used to reflect the penalty for turning across traffic. Let's now presume we want to calculate distances between some number of randomly-selected street junctions. The junctions may readily be extracted through the [`dodgr_contract_graph()` function](https://atfutures.github.io/dodgr/reference/dodgr_contract_graph.html), which reduces the graph to junction vertices only. The junction vertices of `sthlm_graph_cycle_scevl` are re-labelled as described above to separate incoming from outgoing edges (through appending `_start` and `_end` to vertex names), and so may not be used for routing. Instead, routing points should be taken from the contracted version of the original graph.
+
 Our resulting graph for Stockholm contains about half a million edges. The one generated from the map with elevation information has one additional column `dz`  for *distance in z*.  
 
 ```{r}
+dim(sthlm_graph_cycle_scevl_noturn)
 dim(sthlm_graph_cycle_scevl)
 setdiff(colnames(sthlm_graph_cycle_scevl),colnames(sthlm_graph_cycle_sc))
 ``` 
@@ -371,4 +377,15 @@ index_travel_time_outliers <- sthlm_graph_cycle_scevl$travel_time_factors > 5
 index_travel_time_outliers[is.na(index_travel_time_outliers)] <- TRUE # also replace values for NA 
 sthlm_graph_cycle_scevl[index_travel_time_outliers ,"time"] <- unlist(sthlm_graph_cycle_sc[index_travel_time_outliers ,"time"])
 sthlm_graph_cycle_scevl[index_travel_time_outliers ,"time_weighted"] <- unlist(sthlm_graph_cycle_sc[index_travel_time_outliers ,"time_weighted"])
+``` 
+
+Contract the graph to reduce complexity of the network:
+
+```{r}
+dim(sthlm_graph_cycle_scevl)
+sthlm_graph_cycle_scevl_noturn <- dodgr::dodgr_contract_graph(sthlm_graph_cycle_scevl_noturn)
+sthlm_graph_cycle_scevl <- dodgr::dodgr_contract_graph(sthlm_graph_cycle_scevl)
+dim(sthlm_graph_cycle_scevl)
+saveRDS(sthlm_graph_cycle_scevl, file = "data/Dodgr_sthlm_graph_cycle.Rds")
+saveRDS(sthlm_graph_cycle_scevl_noturn, file = "data/Dodgr_sthlm_graph_cycle_noturn.Rds")
 ``` 

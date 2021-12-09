@@ -1,0 +1,64 @@
+---
+title: 'SciLifeLab Commute: I want to ride my bicycle Part I'
+author: "Matthias Zepper"
+date: "12/4/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE  message=FALSE, warning=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+if(!(require("mapdeck") &
+     require("dodgr") &
+     require("geodist"))) {
+  
+  
+  # using the mirror of the Umeå University's Academic Computer Club
+  # Choose a sensible one near you
+  options(repos = c(CRAN = "https://ftp.acc.umu.se/mirror/CRAN/")) 
+  install.packages(c("mapdeck", "dodgr","geodist"))
+
+  }
+```
+
+Loading the dodgr net from previous analysis:
+
+```{r include=FALSE}
+if (!exists("sthlm_graph_cycle") & 
+    file.exists (
+      "data/Dodgr_sthlm_graph_cycle.Rds")) {
+  sthlm_graph_cycle <-
+    readRDS("data/Dodgr_sthlm_graph_cycle.Rds")
+}
+if (!exists("sthlm_graph_cycle_noturn") & 
+    file.exists (
+      "data/Dodgr_sthlm_graph_cycle_noturn.Rds")) {
+  sthlm_graph_cycle_noturn <-
+    readRDS("data/Dodgr_sthlm_graph_cycle_noturn.Rds")
+}
+```
+
+Now, after the outliers are fixed, we can start simulating traffic on our street network. We will start to simulate cycling distances between 1000 random points on the network. Mind that our random points must be drawn from the `noturn` graph. 
+
+```{r}
+sthlm_graph_cycle_vertices <- dodgr::dodgr_vertices(sthlm_graph_cycle_noturn) 
+head(sthlm_graph_cycle_vertices, n=3)
+sthlm_graph_from<- sample(sthlm_graph_cycle_vertices$id, size = 1000)
+sthlm_graph_to <- sample(sthlm_graph_cycle_vertices$id, size = 1000)
+``` 
+Calculate matrix of pair-wise distances between randomly sampled points and get range and median distances. The range will be between 0 and the maximum distance in meters. The longest routes may be in the range of about 200km. 
+
+```{r}
+sthlm_graph_cycle_dists <- dodgr::dodgr_dists(sthlm_graph_cycle, from = sthlm_graph_from, to = sthlm_graph_to)
+range (sthlm_graph_cycle_dists, na.rm = TRUE)
+median(sthlm_graph_cycle_dists, na.rm = TRUE)
+```
+
+Aggregate the single movements to flows:
+
+```{r}
+flows <- matrix(1,nrow=1000,ncol=1000) #each flow is as likely as any other
+sthlm_graph_cycle_flows <- dodgr::dodgr_flows_aggregate(sthlm_graph_cycle, from = sthlm_graph_cycle_sample, to = sthlm_graph_cycle_sample, flows=flows)
+```
+
+ We will also assume that all our routes will end at the SciLifeLab. Therefore we will need to indetify the node in our net that represents the location of the SciLifeLab.  
