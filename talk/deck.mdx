@@ -6,7 +6,7 @@ import { CsvToHtmlTable } from 'react-csv-to-table';
 import scilifelabTheme from "./styles/scilifelabTheme"
 export const theme = scilifelabTheme
 
-import { Logo, LogoNeu, Table, DataTable, Column} from './components'
+import { Logo, LogoBlank, Table, DataTable, Column} from './components'
 import bicyclemusic from './static/music/bicycle.mp3';
 
 import {datagetbb} from './data/getbb'
@@ -18,16 +18,15 @@ import {datadodgrweightsc} from './data/dodgrWeightsC'
 
 
 <Image
-  src="http://localhost:8081/assets/scilifelab/scilifelabtraffic.jpg"
+  src="http://localhost:8081/scilifelab/scilifelabtraffic.jpg"
   style={{
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    color: 'white',
-    backgroundColor: 'black',
   }}></Image>
 
 ## Commuter traffic analysis in R
+<LogoBlank/>
 
 ---
 
@@ -38,7 +37,7 @@ import {datadodgrweightsc} from './data/dodgrWeightsC'
 <Step>
 
 <Image
-  src="http://localhost:8081/assets/photos/muensterprinzipalmarkt.jpg"
+  src="http://localhost:8081/photos/muensterprinzipalmarkt.jpg"
   style={{
     display: 'flex',
     alignItems: 'center',
@@ -46,7 +45,7 @@ import {datadodgrweightsc} from './data/dodgrWeightsC'
   }}></Image>
 
 <Image
-  src="http://localhost:8081/assets/img/triumphuspacis.jpg"
+  src="http://localhost:8081/img/triumphuspacis.jpg"
   style={{
     display: 'flex',
     alignItems: 'center',
@@ -67,7 +66,7 @@ import {datadodgrweightsc} from './data/dodgrWeightsC'
 <Step>
 
 <Image
-  src="http://localhost:8081/assets/photos/muensterluftbild.jpg"
+  src="http://localhost:8081/photos/muensterluftbild.jpg"
   style={{
     display: 'flex',
     alignItems: 'center',
@@ -75,7 +74,7 @@ import {datadodgrweightsc} from './data/dodgrWeightsC'
   }}></Image>
 
 <Image
-  src="http://localhost:8081/assets/photos/muensterpromenade.jpg"
+  src="http://localhost:8081/photos/muensterpromenade.jpg"
   style={{
     display: 'flex',
     alignItems: 'center',
@@ -235,6 +234,35 @@ opq("stockholm se") %>%
 
 ---
 
+## Selecting features
+  <sub>No motorways</sub>
+<Image
+  src="http://localhost:8081/maps/tomtebodakurvan.png"
+  style={{
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+  }}></Image>
+
+
+<LogoBlank/>
+
+---
+
+## Selecting features
+  <sub>Cycleroutes next to main roads</sub>
+<Image
+  src="http://localhost:8081/maps/vaesterbron.png"
+  style={{
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+  }}></Image>
+
+<LogoBlank/>
+
+---
+
 <CodeSurfer>
 
 ```r 1:2 title="Output format"
@@ -303,13 +331,14 @@ opq("stockholm se") %>%
 <iframe width="100%" height="90%"
 src="http://localhost:8081/maps/mapdeckA.html"
 title="Road network vizualized"></iframe>
+<LogoBlank/>
 
 ---
 
 ### deck.gl DataViz library
 <iframe width="100%" height="90%"
 src="http://avivator.gehlenborglab.org/?image_url=https://viv-demo.storage.googleapis.com/Vanderbilt-Spraggins-Kidney-MxIF.ome.tif"
-title="Road network vizualized"></iframe>
+title="Deck.gl for biology"></iframe>
 
 ---
 
@@ -355,15 +384,22 @@ set_token (Sys.getenv("MAPBOX_TOKEN"))
 ---
 
 ### Mapdeck rendered network
-<iframe width="100%" height="90%"
-src="http://localhost:8081/maps/mapdeckA.html"
-title="Road network vizualized"></iframe>
+<Image
+  src="http://localhost:8081/maps/stockholmmapenlarge.png"
+  style={{
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+  }}></Image>
+
+
+<LogoBlank/>
 
 ---
 
 ## Adding elevation data
 
-<Image src="http://localhost:8081/assets/img/steep.svg"
+<Image src="http://localhost:8081/img/steep.svg"
   style={{
     display: 'flex',
     alignItems: 'center',
@@ -383,7 +419,7 @@ title="Elevation model"></iframe>
 
 ## Mind the projection!
 
-<Image src="http://localhost:8081/assets/img/mollweideprojection.jpg"
+<Image src="http://localhost:8081/img/mollweideprojection.jpg"
   style={{
     display: 'flex',
     alignItems: 'center',
@@ -393,7 +429,7 @@ title="Elevation model"></iframe>
   ---
 
 ## Lantmäteriet uses SWEREF99!
-<Image src="http://localhost:8081/assets/img/millerprojection.svg"
+<Image src="http://localhost:8081/img/millerprojection.svg"
   style={{
     display: 'flex',
     alignItems: 'center',
@@ -462,7 +498,7 @@ sthlm_map_cycle_scevl <-
 
 <Table>
   <Column>
-    <Image src="http://localhost:8081/assets/img/7_bridges.svg"
+    <Image src="http://localhost:8081/img/7_bridges.svg"
     style={{
     display: 'flex',
     alignItems: 'center',
@@ -472,7 +508,7 @@ sthlm_map_cycle_scevl <-
   }}></Image>
   </Column>
   <Column>
-    <Image src="http://localhost:8081/assets/img/koeningsberg-graph.svg"
+    <Image src="http://localhost:8081/img/koeningsberg-graph.svg"
     style={{
     display: 'flex',
     alignItems: 'center',

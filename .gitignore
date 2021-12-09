@@ -1,8 +1,10 @@
 .DS_Store
+.Rprofile
+.Rhistory
 
 # Directories with sensitive or large data
 analysis/data
-talk/music
+talk/assets/music
 
 # Logs
 logs
