@@ -1,10 +1,10 @@
 {
-  "name": "Coffee and Code: Matthias Zepper",
+  "name": "Coffee and Code talk Commuting to SciLifeLab",
   "version": "1.0.0",
   "scripts": {
     "start": "concurrently \"npm:mdx\" \"npm:static\"",
     "mdx": "mdx-deck deck.mdx",
-    "static": "cd static && ", 
+    "static": "cd static && ",
     "build": "mdx-deck build deck.mdx"
   },
   "dependencies": {
@@ -14,7 +14,7 @@
     "pretty-format": "^27.2.4",
     "react-csv-to-table": "0.0.1",
     "react-icons": "^4.3.1",
-    "styled-components": "^5.3.1"
+    "styled-components": "5.2.1"
   },
   "devDependencies": {
     "code-surfer": "3.1.0",
