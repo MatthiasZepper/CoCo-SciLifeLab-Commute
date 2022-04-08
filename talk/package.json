@@ -4,7 +4,7 @@
   "scripts": {
     "start": "concurrently \"npm:mdx\" \"npm:static\"",
     "mdx": "mdx-deck deck.mdx",
-    "static": "cd static && python -m http.server 8081", 
+    "static": "cd static && ", 
     "build": "mdx-deck build deck.mdx"
   },
   "dependencies": {

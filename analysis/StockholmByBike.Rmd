@@ -35,7 +35,7 @@ if (!dir.exists ("data")) {
 # Setting to download data anew - even if already present
 config_download_data <- FALSE
 config_enrich_elevation <- FALSE
-config_path_geotiffs <- "./data/nh_01_Stockholms_lan_Sweref_99_TM_geotiff"
+config_path_geotiffs <- "./data/nh_01_Stockholms_lan_WGS84_geotiff"
 ```
 
 ## Obtain a street map of Stockholm
@@ -50,7 +50,7 @@ It provides the `opq` function that constructs an *over pass query* for us:
 
 ```{r}
 library("osmdata")
-osmdata::opq ("stockholm se")
+osmdata::opq ("Stockholm")
 ```
 
 The `opq` function works based on a bounding box of geospatial coordinates. Under the hood, it therefore calls the `getbb` function to derive a bounding box from a name or query based on an importance-ranked return:
@@ -65,15 +65,41 @@ At a latitude of 60°, Δ1°<sub>lat</sub> corresponds to ~111km, whereas Δ1°<
 
 ```{r}
 coordinates <-
-  scan(textConnection(opq ("stockholm se")$bbox), sep = ",")
+  scan(textConnection(opq ("Stockholm")$bbox), sep = ",")
+  lat <- diff(coordinates[c(1, 3)]) * 111.412
+  long <- diff(coordinates[c(2, 4)]) * 55.8
+  area <- lat * long
 print(paste0(
   "ΔLatitude: ",
-  diff(coordinates[c(1, 3)]) * 111.412,
+  round(lat,1),
   "km; ΔLongitude: ",
-  diff(coordinates[c(2, 4)]) * 55.8,
-  "km"
+  round(long,2),
+  "km; Area: ",
+  round(area),
+  "km2"
 ))
 ```
+
+This however refers only to the inner city of Stockholm and in particular omits many areas in the west like Järfalla, Upplands Väsby and such. Therefore we will download the data for the whole Stockholms län. *SE-AB* is the ISO3166-2 standardized code for the province, so it is actually safer than just entering *Stockholms län*, but in this case both work fine: Using the same function as above to verify: 
+
+```{r}
+coordinates <-
+  scan(textConnection(opq ("Stockholms län")$bbox), sep = ",")
+  lat <- diff(coordinates[c(1, 3)]) * 111.412
+  long <- diff(coordinates[c(2, 4)]) * 55.8
+  area <- lat * long
+print(paste0(
+  "ΔLatitude: ",
+  round(lat,1),
+  "km; ΔLongitude: ",
+  round(long,2),
+  "km; Area: ",
+  round(area),
+  "km2"
+))
+```
+This now increases the area by 50, but since the more densely populated areas constitute more data, it only increases the amount of downloaded data by approximately 3.5 fold. 
+
 ### Select data format and features of interest
 
 Unless your query refers to some poorly mapped area e.g. in Siberia, such a square comprises **a lot** of data. For a densely populated city like Stockholm, we should therefore reduce the query to data that we will need and e.g. drop all buildings. 
@@ -81,7 +107,7 @@ Unless your query refers to some poorly mapped area e.g. in Siberia, such a squa
 Navigable paths, routes, and ways are all tagged within OSM as *highway*, readily enabling an overpass query to return only ways that can be used for routing purposes. Thus, we can restrict the query to highways only:  
 
 ```{r}
-osmdata::opq("stockholm se") %>%
+osmdata::opq("Stockholms län") %>%
   osmdata::add_osm_feature (key = "highway")
 ```
 
@@ -92,7 +118,7 @@ Nonetheless, we can save some data and reduce computing time if we already restr
 OSM contains comprehensive annotations and thus [distinguishes many different features](https://wiki.openstreetmap.org/wiki/Map_features) such as *biergarten* or *nudism*. Within `osmdata` available features can be listed by `available_features()`. For a more cyclist-focused query we might want to use something like:
 
 ```{r}
-osmdata::opq("stockholm se") %>%
+osmdata::opq("Stockholms län") %>%
   osmdata::add_osm_feature(key = "bicycle") %>%
   osmdata::add_osm_feature(key = "cycleway")
 ```
@@ -102,7 +128,7 @@ Multiple `add_osm_feature()` calls will however be interpreted as a logical *AND
 Logical *OR* conjunctions can be made with `add_osm_features()`. Mind that features must be enclosed in escape-delimited quotations, so adding `\"` is mandatory.  
 
 ```{r}
-osmdata::opq("stockholm se") %>%
+osmdata::opq("Stockholms län") %>%
   osmdata::add_osm_features(
     features = c(
         "\"amenity\"=\"bicycle_parking\"",
@@ -135,8 +161,7 @@ In contrast, [Silicate](https://github.com/hypertidy/silicate) can accommodate a
 if (!file.exists ("data/Silicate_sthlm_map_cycle.Rds") |
     !file.exists ("data/SimpleFeatures_sthlm_map_cycle.Rds") |
     config_download_data) {
-  sthlm_map_cycle <- osmdata::opq("stockholm se") %>%
-    osmdata::add_osm_feature (key = "ISO3166-2", value = "SE-AB") %>%  
+  sthlm_map_cycle <- osmdata::opq("Stockholms län", timeout=600) %>%
     osmdata::add_osm_features(
       features = c(
         "\"amenity\"=\"bicycle_parking\"",
@@ -188,31 +213,62 @@ However, even though Open Street Map contains comprehensive data, elevation data
 head(sthlm_map_cycle_sc$vertex, n=3) 
 ```
 
-Therefore, if we wish to consider elevation data for routing, we need to obtain it from another source and integrate it with our cycle map. The `osmdata` package can integrate elevation data in GeoTIFF format, an extended image file format that represents elevation as grayscale values. 
+Therefore, if we wish to consider elevation data for routing, we need to obtain it from another source and integrate it with our cycle map. The `osmdata` package can integrate elevation data in GeoTIFF format, an extended image file format that represents elevation as grayscale values, using the convienient function `osmdata::osm_elevation`. 
 
-One option is the [CGIAR-CSI SRTM dataset](https://srtm.csi.cgiar.org/srtmdata), a post-processed derivation of the finished-grade 3 arc-second SRTM data released by the *National Aeronautics and Space Administration* (NASA) and distributed by the *United States Geological Survey* (USGS). Since it is based on satellite data, it lacks information for areas that are rarely overflown by satellites. In northern Europe, the boundary of this dataset is at about 60° latitude. Stockholm is therefore still covered (albeit at a low resolution), but not northern Sweden. Its resolution is also pretty low for routing within cities, all bridges are for example considered to be almost on sea level.  
+It is optimized for data from the [CGIAR-CSI SRTM dataset](https://srtm.csi.cgiar.org/srtmdata), a post-processed derivation of the finished-grade 3 arc-second SRTM data released by the *National Aeronautics and Space Administration* (NASA) and distributed by the *United States Geological Survey* (USGS). Since it is based on satellite data, it lacks information for areas that are rarely overflown by satellites. In northern Europe, the boundary of this dataset is at about 60° latitude. Stockholm is therefore still covered (albeit at a low resolution), but not northern Sweden. Its resolution is also pretty low for routing within cities, all bridges are for example considered to be almost on sea level.
 
-Hence, if possible other sources of GeoTIFF files should be considered. In 2019 the [Lantmäteriet](https://geoforum.se/nyheter/34-infrastruktur-for-geodata/3844-nationella-hoejdmodellen-aer-klar) created a new reference dataset. [For Göteborg, the Swedish Data Portal hosts an excerpt](https://www.dataportal.se/en/datasets/66_70974/hojdmodell-geotiff) that is freely available. High resolution data for Stockholm can be accessed for educational purposes with a SWAMID account at the [GET service](https://www.lantmateriet.se/globalassets/dokumentarkiv/samverkan/forskning-utbildning-och-kultur/get2howto.pdf) or [as open data with a 50m resolution after registering a user account at the Lantmäteriet ](https://www.lantmateriet.se/en/maps-and-geographic-information/open-geodata/#faq=feef).
+```{r eval=FALSE}
+#GeoTIFF downloaded from https://srtm.csi.cgiar.org/wp-content/uploads/files/srtm_5x5/TIFF/srtm_40_01.zip
+sthlm_map_cycle_scevl <- osmdata::osm_elevation(sthlm_map_cycle_sc, elev_file = "./data/srtm_40_01/srtm_40_01.tif")
+}
+```
 
+Hence, if possible, other sources of GeoTIFF files should be considered. In 2019 the [Lantmäteriet](https://geoforum.se/nyheter/34-infrastruktur-for-geodata/3844-nationella-hoejdmodellen-aer-klar) created a new reference dataset. [For Göteborg, the Swedish Data Portal hosts an excerpt](https://www.dataportal.se/en/datasets/66_70974/hojdmodell-geotiff) that is freely available. High resolution data for Stockholm can be accessed for educational purposes with a SWAMID account at the [GET service](https://www.lantmateriet.se/globalassets/dokumentarkiv/samverkan/forskning-utbildning-och-kultur/get2howto.pdf) or [as open data with a 50m resolution after registering a user account at the Lantmäteriet ](https://www.lantmateriet.se/en/maps-and-geographic-information/open-geodata/#faq=feef).
 
-However, if you try to simply add the `nh_01_Stockholms_lan_Sweref_99_TM_geotiff` (or any other data set from Lantmäteriet) you will unfortunately fail:
+However, if you try to simply add the `nh_01_Stockholms_lan_Sweref_99_TM_geotiff` (or any other dataset from Lantmäteriet) you will unfortunately fail: *In showSRID(SRS_string, format = "PROJ", multiline = "NO", prefer_proj = prefer_proj) : Discarded datum SWEREF99 in Proj4 definition*
+
+The reason is, that our earth is of course not flat and in order to coerce geographical information into a two-dimensional representation like a flat image file, a projection needs to be used. Most [Swedish datasets make use of the SWEREF99 coordinate system](https://www.lantmateriet.se/en/maps-and-geographic-information/gps-geodesi-och-swepos/Referenssystem/Tredimensionella-system/SWEREF-99/). This is Swedens national coordinate system and is only used in and around Sweden. The reason to maintain an own system is that most projections are optimized for smaller latitudes and an increasingly strong distortion is accepted towards the poles. For a country like Sweden that extents beyond the polar circle, a more favorable projection is hence advisable, but makes it difficult to integrate with most other data sources.    
+
+In order to use these coordinates together with software that works with the WGS84 coordinate system, an internationally widely used standard that also OSM adheres to, [conversion using a Gauss-Kreuger projection](https://pap.as/sweref/) is needed.
+
+Some software can do the transformation on the fly, if the appropriate sidecar file with spatial information is provided (the accompanying .tfw files in the folder), but `osm_elevation` depends solely on the GeoTIFF header, so a prior conversion of the TIFF files e.g. with [`gdalwarp`](https://gdal.org/programs/gdalwarp.html) is necessary. Integration into R is offered by the [`gdalio`](https://github.com/hypertidy/gdalio) package, but I just used a small command line script to convert the TIFF files. 
+
+```{bash eval=FALSE}
+find "./data/nh_01_Stockholms_lan_Sweref_99_TM_geotiff" -maxdepth 1 -type f -name '*.tif' | while read -r FILE
+    do
+       basefilename="$(basename $FILE)" 
+	   echo "Geotransforming $basefilename"
+       basefilename="$(echo $basefilename | sed 's/.tif/_WGS84.tif/g')"  
+	   gdalwarp -overwrite -s_srs EPSG:3006 -t_srs EPSG:4326 -of GTiff "$FILE" "./data/nh_01_Stockholms_lan_WGS84_geotiff/${basefilename}"
+
+done
+```
+
+Unfortunately, the `osmdata::osm_elevation` function will also not work with multiple files, so I wrote this custom derivative function to annotate my data with elevation data:
 
 ```{r eval=FALSE}
 if(config_enrich_elevation) {
-  for (elevfile in list.files(config_path_geotiffs,
-                              pattern = "[0-9].tif",
-                              full.names = TRUE)) {
-    sthlm_map_cycle_scevl <-
-      osmdata::osm_elevation(sthlm_map_cycle_sc, elev_file = elevfile)
-    
-     saveRDS(sthlm_map_cycle_scevl, file = "data/Silicate_sthlm_map_cycle_elevation.Rds")
+  
+enrich_elevation <- function(dat,geotiff_path, pattern=NULL, replace_na=FALSE){
+
+  files <- as.list(list.files(config_path_geotiffs,pattern = pattern, full.names = TRUE))
+  z_values <- lapply(files,function(x,dat){osmdata::osm_elevation(dat,elev_file=x)$vertex$z_},dat=dat)
+  z_values <- do.call("cbind",z_values)
+  z_values <-  rowMeans(z_values,na.rm = TRUE)
+
+  if(replace_na){
+    z_values[is.na(z_values)] <- median(z_values,na.rm = TRUE)
   }
+  
+  dat$vertex$z_ <- as.double(z_values)
+  dat$vertex <- dat$vertex[, c("x_", "y_", "z_", "vertex_")]
+  return(dat)
+}
+
+  sthlm_map_cycle_scevl <- enrich_elevation(sthlm_map_cycle_sc,config_path_geotiffs,pattern="[0-9]_WGS84.tif",replace_na = TRUE)
+  saveRDS(sthlm_map_cycle_scevl, file = "data/Silicate_sthlm_map_cycle_elevation.Rds")
 }
 ```
- 
-The reason is, that our earth is of course not flat and in order to coerce geographical information into a two-dimensional representation like a flat image file, a projection needs to be used. Most [Swedish datasets make use of the SWEREF99 coordinate system](https://www.lantmateriet.se/en/maps-and-geographic-information/gps-geodesi-och-swepos/Referenssystem/Tredimensionella-system/SWEREF-99/). This is Swedens national coordinate system, and can only be used in and around Sweden. In order to use these coordinates together with software that works with the WGS84 coordinate system, an internationally widely used standard that also OSM adheres to, [conversion using a Gauss-Kreuger projection](https://pap.as/sweref/) is needed.
-
-Some software can do the transformation on the fly, if the appropriate sidecar file with spatial information is provided (the accompanying .tfw files in the folder), but `osm_elevation` depends solely on the GeoTIFF header, so a prior conversion of the TIFF files e.g. with [`gdalwarp`](https://gdal.org/programs/gdalwarp.html) is necessary. Integration into R is offered by the [`gdalio`](https://github.com/hypertidy/gdalio) package.
 
 As a final result, we will have a `z_` variable containing the elevation in meters for each vertex:
 

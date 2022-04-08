@@ -127,6 +127,25 @@ attr(,"nodes_only")
 [1] FALSE
 ```
 
+```r 1:2 title="An overpass API query"
+$bbox
+[1] "59.1651172,17.9110935,59.4851172,18.2310935"
+
+$prefix
+[1] "[out:xml][timeout:25];\n(\n"
+
+$suffix
+[1] ");\n(._;>;);\nout body;"
+
+$features
+NULL
+
+attr(,"class")
+[1] "list"           "overpass_query"
+attr(,"nodes_only")
+[1] FALSE
+```
+
 </CodeSurfer>
 
 <Logo/>
@@ -136,12 +155,11 @@ attr(,"nodes_only")
 <CodeSurfer>
 
 ```r title="Obtaining the bounding box"
-library("osmdata")
 opq("stockholm se")
 ```
 
 ```r title="Obtaining the bounding box"
-  getbb(place_name = "Stockholm", 
+  getbb(place_name = "stockholm se", 
         format_out = "data.frame")
 ```
 
@@ -348,33 +366,33 @@ title="Deck.gl for biology"></iframe>
 library("mapdeck")
 set_token (Sys.getenv("MAPBOX_TOKEN"))
   mapdeck (style = 'mapbox://styles/mapbox/light-v9') %>%
-    mapdeck::add_path (data = sthlm_map_cycle_sf$osm_lines,
-              stroke_width = 1,
-              stroke_colour = "#4c979f",
-              stroke_opacity = 0.6,
-              layer_id = "lines")
+    add_path (data = sthlm_map_cycle_sf$osm_lines,
+        stroke_width = 1,
+        stroke_colour = "#4c979f",
+        stroke_opacity = 0.6,
+        layer_id = "lines")
 ```
 
 ```r 2:3 title="Mapdeck: R-bindings for Deck.gl"
 library("mapdeck")
 set_token (Sys.getenv("MAPBOX_TOKEN"))
   mapdeck (style = 'mapbox://styles/mapbox/light-v9') %>%
-    mapdeck::add_path (data = sthlm_map_cycle_sf$osm_lines,
-              stroke_width = 1,
-              stroke_colour = "#4c979f",
-              stroke_opacity = 0.6,
-              layer_id = "lines")
+    add_path (data = sthlm_map_cycle_sf$osm_lines,
+        stroke_width = 1,
+        stroke_colour = "#4c979f",
+        stroke_opacity = 0.6,
+        layer_id = "lines")
 ```
 
 ```r 4:8 title="Mapdeck: R-bindings for Deck.gl"
 library("mapdeck")
 set_token (Sys.getenv("MAPBOX_TOKEN"))
   mapdeck (style = 'mapbox://styles/mapbox/light-v9') %>%
-    mapdeck::add_path (data = sthlm_map_cycle_sf$osm_lines,
-              stroke_width = 1,
-              stroke_colour = "#4c979f",
-              stroke_opacity = 0.6,
-              layer_id = "lines")
+    add_path (data = sthlm_map_cycle_sf$osm_lines,
+        stroke_width = 1,
+        stroke_colour = "#4c979f",
+        stroke_opacity = 0.6,
+        layer_id = "lines")
 ```
 
 </CodeSurfer>
